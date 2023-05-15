@@ -27,6 +27,6 @@ class mqtt_msgViewSet(viewsets.ModelViewSet):
 class mqtt_msgViewList(generics.ListAPIView):
     serializer_class = mqtt_msgSerializer
     permission_classes = [permissions.IsAuthenticated]
-    queryset = mqtt_msg.objects.objects.all()
+    queryset = mqtt_msg.objects.all()
     filter_backends=(DjangoFilterBackend,)
     filter_fields=('id',)
