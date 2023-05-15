@@ -1,0 +1,21 @@
+{
+  "device":
+
+{
+  "id":"shellyem3-E89F6D84A179",
+  "circuit":"2",
+  "type":"shellyem3",
+  "relay":null},
+
+  "measures":
+{
+    "energy":"0",
+    "returned_energy":"0",
+    "power":"0.00",
+    "pf":"0.02",
+    "current":"0.01",
+    "voltage":"235.96",
+    "total":"0.0",
+    "total_returned":"0.0"}
+
+}
