@@ -124,7 +124,8 @@ def message_handler(payload,topic):
     device=id+'_'+circuit+'_'+type+'_'+relay
 
     if relay=='relay' or relay == 'no_relay' or relay == 'ext_temperatures' or parameter == 'no_parameter' or relay == 'announce':
-        reported_measure(device=mqtt_dm_dict['device'], measures=mqtt_dm_dict['measure']).save()
+        # reported_measure(device=mqtt_dm_dict['device'], measures=mqtt_dm_dict['measure']).save()
+        pass
 
     if relay == 'emeter':
 
@@ -143,7 +144,7 @@ def on_connect(mqtt_client, userdata, flags, rc):
 def on_message(mqtt_client, userdata, msg):
     topic=msg.topic
     payload = str(msg.payload.decode("utf-8", "ignore"))
-    print(f'Received message on topic: {msg.topic} with payload: {msg.payload}')
+    # print(f'Received message on topic: {msg.topic} with payload: {msg.payload}')
     message_handler(payload,topic)
 
 

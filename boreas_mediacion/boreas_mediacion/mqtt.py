@@ -123,22 +123,22 @@ def on_message(mqtt_client, userdata, msg):
 
 
 
-MQTT_SERVER = 'mqtt.rg-iotsolutions.com'
-MQTT_PORT = 8883
-MQTT_KEEPALIVE = 60
-MQTT_USER = 'pablo'
-MQTT_PASSWORD = 'pabloDev1234'
-MQTT_TLS=r'C:\Users\alons\OneDrive\PROYECTOS\RGIoT\isrg-root-x1-cross-signed.pem'
-
-client = mqtt.Client()
-client.on_connect = on_connect
-client.on_message = on_message
-client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
-client.tls_set(ca_certs=MQTT_TLS, certfile=None,
-                    keyfile=None, cert_reqs=ssl.CERT_NONE,
-                    tls_version=ssl.PROTOCOL_TLSv1_2, ciphers=None)
-client.connect(
-    host=MQTT_SERVER,
-    port=MQTT_PORT,
-    keepalive=MQTT_KEEPALIVE
-)
+# MQTT_SERVER = 'mqtt.rg-iotsolutions.com'
+# MQTT_PORT = 8883
+# MQTT_KEEPALIVE = 60
+# MQTT_USER = 'pablo'
+# MQTT_PASSWORD = 'pabloDev1234'
+# # MQTT_TLS=r'C:\Users\alons\OneDrive\PROYECTOS\RGIoT\isrg-root-x1-cross-signed.pem'
+#
+# client = mqtt.Client()
+# client.on_connect = on_connect
+# client.on_message = on_message
+# client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
+# client.tls_set(ca_certs=MQTT_TLS, certfile=None,
+#                     keyfile=None, cert_reqs=ssl.CERT_NONE,
+#                     tls_version=ssl.PROTOCOL_TLSv1_2, ciphers=None)
+# client.connect(
+#     host=MQTT_SERVER,
+#     port=MQTT_PORT,
+#     keepalive=MQTT_KEEPALIVE
+# )

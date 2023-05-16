@@ -29,7 +29,7 @@ urlpatterns = [
     path('', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('admin/', admin.site.urls),
-    path('publish', views.publish_message, name='publish'),
+    # path('publish', views.publish_message, name='publish'),
     re_path(r'^mqtt_msg-list/$', views.mqtt_msgViewList.as_view()),
 
 ]
