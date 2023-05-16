@@ -1,5 +1,6 @@
 import json
 
+import django_filters
 from django.http import JsonResponse
 from rest_framework import viewsets, permissions, generics
 
@@ -7,6 +8,7 @@ from .models import mqtt_msg
 # from .mqtt import client as mqtt_client
 from .serializers import mqtt_msgSerializer
 from django_filters.rest_framework import DjangoFilterBackend
+from django_filters.rest_framework import filters
 
 
 # def publish_message(request):
@@ -24,9 +26,12 @@ class mqtt_msgViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     queryset = mqtt_msg.objects.all()
 
+
+
+
 class mqtt_msgViewList(generics.ListAPIView):
     queryset = mqtt_msg.objects.all()
     serializer_class = mqtt_msgSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends=[DjangoFilterBackend]
-    filter_fields=['id']
+    filterset_fields=['device_id']

@@ -123,16 +123,16 @@ def message_handler(payload,topic):
 
     device=id+'_'+circuit+'_'+type+'_'+relay
 
-    if relay=='relay' or relay == 'no_relay' or relay == 'ext_temperatures' or parameter == 'no_parameter' or relay == 'announce':
+    # if relay=='relay' or relay == 'no_relay' or relay == 'ext_temperatures' or parameter == 'no_parameter' or relay == 'announce':
         # reported_measure(device=mqtt_dm_dict['device'], measures=mqtt_dm_dict['measure']).save()
-        pass
+        # pass
 
-    if relay == 'emeter':
+    # if relay == 'emeter':
 
-        try:
-            mqtt_msg(device=mqtt_dm_dict['device'],measures=mqtt_dm_dict['measure']).save()
-        except:
-            update_device_field(mqtt_dm_dict['device'], parameter, value)
+    try:
+        mqtt_msg(device=mqtt_dm_dict['device'],measures=mqtt_dm_dict['measure'],device_id=id).save()
+    except:
+        update_device_field(mqtt_dm_dict['device'], parameter, value)
 
 
 def on_connect(mqtt_client, userdata, flags, rc):
