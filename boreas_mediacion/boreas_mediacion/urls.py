@@ -22,7 +22,6 @@ from . import views
 
 router = routers.DefaultRouter()
 router.register(r'mqtt_msgs', views.mqtt_msgViewSet)
-# router.register(r'mqtt_msg-list', views.mqtt_msgViewList)
 
 
 urlpatterns = [
@@ -31,6 +30,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # path('publish', views.publish_message, name='publish'),
     re_path(r'^mqtt_msg-list/$', views.mqtt_msgViewList.as_view()),
+    re_path(r'^reported_measure-list/$', views.reported_measureViewList.as_view()),
 
 ]
 

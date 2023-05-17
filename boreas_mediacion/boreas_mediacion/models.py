@@ -9,4 +9,5 @@ class mqtt_msg(models.Model):
 class reported_measure(models.Model):
     report_time=models.DateTimeField(auto_now=True)
     device=models.JSONField()
+    device_id=models.CharField(max_length=100)
     measures=models.JSONField()

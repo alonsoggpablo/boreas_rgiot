@@ -128,7 +128,7 @@ def message_handler(payload,topic):
     device=id+'_'+circuit+'_'+type+'_'+relay
 
     if relay=='relay' or relay == 'no_relay' or relay == 'ext_temperatures' or parameter == 'no_parameter' or relay == 'announce':
-        reported_measure(device=mqtt_dm_dict['device'], measures=mqtt_dm_dict['measure']).save()
+        reported_measure(device=mqtt_dm_dict['device'], measures=mqtt_dm_dict['measure'],device_id=id).save()
         try:
             reported_measure.objects.filter(device=mqtt_dm_dict['device'],report_time__lt=timezone.now()-timedelta(minutes=5)).delete()
         except:pass
