@@ -1,0 +1,1 @@
+C:\Desarrollo_Pablo\boreas_rgiot\venv\Scripts\python.exe manage.py runserver
