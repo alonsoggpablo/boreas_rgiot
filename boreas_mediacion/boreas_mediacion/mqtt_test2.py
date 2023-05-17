@@ -3,10 +3,14 @@ import ssl
 import paho.mqtt.client as mqtt
 import django
 import os
+
+import pytz
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "boreas_rgiot.boreas_mediacion.boreas_mediacion.settings")
 from django.conf import settings
 import psycopg2
-
+from datetime import datetime,timedelta
+from django.utils import timezone
 django.setup()
 from .models import mqtt_msg, reported_measure
 
@@ -125,6 +129,9 @@ def message_handler(payload,topic):
 
     if relay=='relay' or relay == 'no_relay' or relay == 'ext_temperatures' or parameter == 'no_parameter' or relay == 'announce':
         reported_measure(device=mqtt_dm_dict['device'], measures=mqtt_dm_dict['measure']).save()
+        try:
+            reported_measure.objects.filter(device=mqtt_dm_dict['device'],report_time__lt=timezone.now()-timedelta(minutes=5)).delete()
+        except:pass
 
     if relay == 'emeter':
 
