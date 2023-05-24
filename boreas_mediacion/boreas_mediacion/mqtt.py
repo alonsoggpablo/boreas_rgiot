@@ -26,6 +26,72 @@ conn = psycopg2.connect(
 )
 cursor = conn.cursor()
 
+class MQTT_msg_topic:
+    def __init__(self,topic):
+        self.topic=topic
+    def get_0(self):
+        try:
+            topic_0=self.topic.split("/")[0]
+        except:topic_0=''
+        return topic_0
+    def get_1(self):
+        try:
+            topic_1=self.topic.split("/")[1]
+        except:topic_1=''
+        return topic_1
+    def get_2(self):
+        try:
+            topic_2=self.topic.split("/")[2]
+        except:topic_2=''
+        return topic_2
+    def get_3(self):
+        try:
+            topic_3=self.topic.split("/")[3]
+        except:topic_3=''
+        return topic_3
+    def get_4(self):
+        try:
+            topic_4=self.topic.split("/")[4]
+        except:topic_4=''
+        return topic_4
+    def get_5(self):
+        try:
+            topic_5=self.topic.split("/")[5]
+        except:topic_5=''
+        return topic_5
+class MQTT_msg_payload:
+    def __init__(self,payload):
+        self.payload=payload
+    def get_0(self):
+        try:
+            payload_0=self.payload.split("/")[0]
+        except:payload_0=''
+        return payload_0
+class MQTT_msg_topic_payload_dict:
+    def __init__(self,topic_0,topic_1,topic_2,topic_3,topic_4,topic_5,payload_0):
+        self.topic_0=topic_0
+        self.topic_1=topic_1
+        self.topic_2=topic_2
+        self.topic_3=topic_3
+        self.topic_4=topic_4
+        self.topic_5=topic_5
+        self.payload_0=payload_0
+
+    def MQTT_to_dict(self):
+        topic_dict={}
+        topic_dict['0']=self.topic_0
+        topic_dict['1']=self.topic_1
+        topic_dict['2']=self.topic_2
+        topic_dict['3']=self.topic_3
+        topic_dict['4']=self.topic_4
+        topic_dict['5']=self.topic_5
+        payload_dict={}
+        payload_dict['0']=self.payload_0
+        topic_payload_dict={}
+        topic_payload_dict['topic']=topic_dict
+        topic_payload_dict['payload']=payload_dict
+        return topic_payload_dict
+
 
 
 class MQTT_device_measure_topic:
@@ -117,60 +183,120 @@ def find_pattern(pattern, string):
     match = re.search(pattern, string)
     return match.group() if match else None
 
-def message_handler(payload,topic):
-    mqtt_dm_topic=MQTT_device_measure_topic(topic)
-    mqtt_dm_payload=MQTT_device_measure_payload(payload)
+# def sensor_message_handler_back(payload,topic):
+#     mqtt_dm_topic=MQTT_device_measure_topic(topic)
+#     mqtt_dm_payload=MQTT_device_measure_payload(payload)
+#
+#     id=mqtt_dm_topic.get_id()
+#     circuit=mqtt_dm_topic.get_circuit()
+#     type=mqtt_dm_topic.get_type()
+#     relay=mqtt_dm_topic.get_relay()
+#     parameter=mqtt_dm_topic.get_parameter()
+#     feed=mqtt_dm_topic.get_feed()
+#     value=mqtt_dm_payload.get_value()
+#
+#     mqtt_dm=MQTT_device_measure(id,circuit,type,relay,feed)
+#     mqtt_dm_dict=mqtt_dm.MQTT_to_dict()
+#     mqtt_dm_dict['measure'][parameter]=value
+#
+#     if relay == 'no_relay' or relay=='ext_temperatures' or relay=='announce':
+#         mqtt_dm_dict['measure']=value
+#
+#     device=id+'_'+circuit+'_'+type+'_'+relay
+#
+#     if relay=='relay' or relay == 'no_relay' or relay == 'ext_temperatures' or parameter == 'no_parameter' or relay == 'announce':
+#         reported_measure(device=mqtt_dm_dict['device'], measures=mqtt_dm_dict['measure'],device_id=id,feed=feed).save()
+#         try:
+#             reported_measure.objects.filter(device=mqtt_dm_dict['device'],report_time__lt=timezone.now()-timedelta(minutes=5)).delete()
+#         except:pass
+#
+#     if relay == 'emeter':
+#
+#         try:
+#             mqtt_msg(device=mqtt_dm_dict['device'],measures=mqtt_dm_dict['measure'],device_id=id,feed=feed).save()
+#         except:
+#             update_device_field(mqtt_dm_dict['device'], parameter, value)
+def sensor_message_handler(payload,topic):
+    mqtt_dm_topic=MQTT_msg_topic(topic)
+    mqtt_dm_payload=MQTT_msg_payload(payload)
 
-    id=mqtt_dm_topic.get_id()
-    circuit=mqtt_dm_topic.get_circuit()
-    type=mqtt_dm_topic.get_type()
-    relay=mqtt_dm_topic.get_relay()
-    parameter=mqtt_dm_topic.get_parameter()
-    feed=mqtt_dm_topic.get_feed()
-    value=mqtt_dm_payload.get_value()
+    id=mqtt_dm_topic.get_1()
+    circuit=mqtt_dm_topic.get_3()
+    type=mqtt_dm_topic.get_1().split("-")[0]
+    relay=mqtt_dm_topic.get_2()
+    parameter=mqtt_dm_topic.get_4()
+    feed=mqtt_dm_topic.get_0()
+    value=mqtt_dm_payload.get_0()
 
     mqtt_dm=MQTT_device_measure(id,circuit,type,relay,feed)
     mqtt_dm_dict=mqtt_dm.MQTT_to_dict()
     mqtt_dm_dict['measure'][parameter]=value
 
-    if feed=='shellies':
+    if relay == 'no_relay' or relay=='ext_temperatures' or relay=='announce':
+        mqtt_dm_dict['measure']=value
 
-        if relay == 'no_relay' or relay=='ext_temperatures' or relay=='announce':
-            mqtt_dm_dict['measure']=value
+    device=id+'_'+circuit+'_'+type+'_'+relay
 
-        device=id+'_'+circuit+'_'+type+'_'+relay
+    if relay=='relay' or relay == 'no_relay' or relay == 'ext_temperatures' or parameter == 'no_parameter' or relay == 'announce':
+        reported_measure(device=mqtt_dm_dict['device'], measures=mqtt_dm_dict['measure'],device_id=id,feed=feed).save()
+        try:
+            reported_measure.objects.filter(device=mqtt_dm_dict['device'],report_time__lt=timezone.now()-timedelta(minutes=5)).delete()
+        except:pass
 
-        if relay=='relay' or relay == 'no_relay' or relay == 'ext_temperatures' or parameter == 'no_parameter' or relay == 'announce':
-            reported_measure(device=mqtt_dm_dict['device'], measures=mqtt_dm_dict['measure'],device_id=id,feed=feed).save()
-            try:
-                reported_measure.objects.filter(device=mqtt_dm_dict['device'],report_time__lt=timezone.now()-timedelta(minutes=5)).delete()
-            except:pass
+    if relay == 'emeter':
 
-        if relay == 'emeter':
+        try:
+            mqtt_msg(device=mqtt_dm_dict['device'],measures=mqtt_dm_dict['measure'],device_id=id,feed=feed).save()
+        except:
+            update_device_field(mqtt_dm_dict['device'], parameter, value)
 
-            try:
-                mqtt_msg(device=mqtt_dm_dict['device'],measures=mqtt_dm_dict['measure'],device_id=id,feed=feed).save()
-            except:
-                update_device_field(mqtt_dm_dict['device'], parameter, value)
+def general_message_handler(payload,topic):
+    mqtt_dm_topic = MQTT_device_measure_topic(topic)
+    mqtt_dm_payload = MQTT_device_measure_payload(payload)
+    device_id = ((find_pattern(r'/(?:(?!/).)', mqtt_dm_topic.topic) or
+                  json.loads(mqtt_dm_payload.measure)['device']['id']) or 'no_device_id').strip("/")
+    feed = mqtt_dm_topic.get_feed()
 
+    if mqtt_msg.objects.filter(device=mqtt_dm_topic.topic + '_' + device_id).exists():
+        mqtt_msg.objects.filter(device=mqtt_dm_topic.topic + '_' + device_id
+                                ).update(measures=mqtt_dm_payload.measure, report_time=timezone.now())
     else:
-        device_id = ((find_pattern(r'/(?:(?!/).)+-(?:(?!/).)', mqtt_dm_topic.topic) or
-                      json.loads(mqtt_dm_payload.measure)['device']['id']) or 'no_device_id').strip("/")
+        try:
 
-        if mqtt_msg.objects.filter(device=mqtt_dm_topic.topic+'_'+device_id).exists():
-            mqtt_msg.objects.filter(device=mqtt_dm_topic.topic+'_'+device_id).update(measures=mqtt_dm_payload.measure,report_time=timezone.now())
-        else:
-            try:
+            mqtt_msg(device=mqtt_dm_topic.topic + '_' + device_id, measures=mqtt_dm_payload.measure,
+                     device_id=device_id, feed=feed).save()
+        except:
+            pass
 
+def router_message_handler(payload,topic):
 
-                mqtt_msg(device=mqtt_dm_topic.topic+'_'+device_id,measures=mqtt_dm_payload.measure,device_id=device_id,feed=feed).save()
-            except:
-                pass
+    mqtt_dm_topic=MQTT_msg_topic(topic)
+    mqtt_dm_payload=MQTT_msg_payload(payload)
+    feed = mqtt_dm_topic.get_0()
+    device_id = mqtt_dm_topic.get_1()
+    parameter=mqtt_dm_topic.get_2()
+    value=mqtt_dm_payload.get_0()
+    if parameter=='uptime':
+        value=str(int(value)/3600)
+    if parameter=='temperature':
+        value=str(float(value)/10)
+
+    measure={parameter:value}
+    device={'id':device_id}
+
+    if mqtt_msg.objects.filter(device=device).exists():
+        update_device_field(device, parameter, value)
+    else:
+        try:
+
+            mqtt_msg(device=device, measures=measure,
+                     device_id=device_id, feed=feed).save()
+        except:
+            pass
+
 def get_topics_list():
     topics_list= list(zip(MQTT_topic.objects.filter(active=True).values_list('topic',flat=True),MQTT_topic.objects.filter(active=True).values_list('qos',flat=True)))
     return topics_list
-
-get_topics_list()
 
 def on_connect(mqtt_client, userdata, flags, rc):
 
@@ -186,7 +312,13 @@ def on_message(mqtt_client, userdata, msg):
     topic=msg.topic
     payload = str(msg.payload.decode("utf-8", "ignore"))
     print(f'Received message on topic: {msg.topic} with payload: {msg.payload}')
-    message_handler(payload,topic)
+    if 'shellies' in topic:
+        sensor_message_handler(payload,topic)
+    if 'router/' in topic:
+        router_message_handler(payload,topic)
+    else:
+        general_message_handler(payload,topic)
+
 
 #Obtenemos datos del broker mqtt
 mqtt_server=MQTT_broker.objects.filter(name='rgiot').values_list('server',flat=True)[0]
