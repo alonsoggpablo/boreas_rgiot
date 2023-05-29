@@ -279,7 +279,9 @@ def router_message_handler(payload,topic):
     if parameter=='uptime':
         value=str(int(value)/3600)
     if parameter=='temperature':
-        value=str(float(value)/10)
+        try:
+            value=str(float(value)/10)
+        except:value=value
 
     measure={parameter:value}
     device={'id':device_id}
@@ -305,7 +307,6 @@ def on_connect(mqtt_client, userdata, flags, rc):
         # mqtt_client.subscribe('shellies/#')
         # mqtt_client.subscribe([('RESP/tactica/#',0),('shellies/#',0)])
         mqtt_client.subscribe(get_topics_list())
-        # mqtt_client.subscribe(get_topics_list())
     else:
         print('Bad connection. Code:', rc)
 def on_message(mqtt_client, userdata, msg):
@@ -319,6 +320,13 @@ def on_message(mqtt_client, userdata, msg):
     else:
         general_message_handler(payload,topic)
 
+def on_publish(client,userdata,result):
+    #create function for callback
+    print("data published \n")
+    print (result)
+    print (userdata)
+    pass
+    return
 
 #Obtenemos datos del broker mqtt
 mqtt_server=MQTT_broker.objects.filter(name='rgiot').values_list('server',flat=True)[0]
@@ -332,14 +340,6 @@ MQTT_PORT = mqtt_port
 MQTT_KEEPALIVE = mqtt_keepalive
 MQTT_USER = mqtt_user
 MQTT_PASSWORD = mqtt_password
-
-
-# MQTT_SERVER = 'mqtt.rg-iotsolutions.com'
-# MQTT_PORT = 8883
-# MQTT_KEEPALIVE = 60
-# MQTT_USER = 'pablo'
-# MQTT_PASSWORD = 'pabloDev1234'
-
 
 
 client = mqtt.Client()

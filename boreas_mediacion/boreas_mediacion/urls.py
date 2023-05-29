@@ -19,6 +19,7 @@ from django.urls import path, include, re_path
 from rest_framework import routers
 
 from . import views
+from .views import PublishView
 
 router = routers.DefaultRouter()
 router.register(r'mqtt_msgs', views.mqtt_msgViewSet)
@@ -28,7 +29,7 @@ urlpatterns = [
     path('', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('admin/', admin.site.urls),
-    # path('publish', views.publish_message, name='publish'),
+    path('publish/', PublishView.as_view(), name='publish'),
     re_path(r'^mqtt_msg-list/$', views.mqtt_msgViewList.as_view()),
     re_path(r'^reported_measure-list/$', views.reported_measureViewList.as_view()),
 
