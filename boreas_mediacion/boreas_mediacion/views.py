@@ -1,19 +1,17 @@
 import json
-
+import paho.mqtt.client as mqtt
 import django_filters
 from django.http import JsonResponse
 from paho.mqtt.client import ssl
 from rest_framework import viewsets, permissions, generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
-import paho.mqtt.client as mqtt
 
-from .models import mqtt_msg, reported_measure, MQTT_broker
+from .models import mqtt_msg, reported_measure, MQTT_broker, MQTT_tx
 # from .mqtt import client as mqtt_client
-from .serializers import mqtt_msgSerializer, reported_measureSerializer
+from .serializers import mqtt_msgSerializer, reported_measureSerializer, MQTT_tx_serializer
 from django_filters.rest_framework import DjangoFilterBackend
 from django_filters.rest_framework import filters
-
 
 class mqtt_msgViewSet(viewsets.ModelViewSet):
     serializer_class = mqtt_msgSerializer
@@ -21,7 +19,6 @@ class mqtt_msgViewSet(viewsets.ModelViewSet):
     queryset = mqtt_msg.objects.all()
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['device_id']
-
 
 class mqtt_msgViewList(generics.ListAPIView):
     queryset = mqtt_msg.objects.all()
@@ -37,13 +34,11 @@ class reported_measureViewList(generics.ListAPIView):
     filter_backends=[DjangoFilterBackend]
     filterset_fields=['device_id']
 
-import paho.mqtt.client as mqtt
-
-
-
 class PublishView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     allowed_methods = ['POST', 'GET']
+    queryset=MQTT_tx.objects.all()
+    serializer_class= MQTT_tx_serializer
 
     def post(self, request):
         mqtt_server = MQTT_broker.objects.filter(name='rgiot').values_list('server', flat=True)[0]
@@ -90,3 +85,5 @@ class PublishView(APIView):
     def get(self, request):
         # Logic for handling GET request
         return Response({"message": "GET request handled"})
+
+

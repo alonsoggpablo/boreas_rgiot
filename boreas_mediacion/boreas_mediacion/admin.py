@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import mqtt_msg, MQTT_device_family, MQTT_broker
+from .models import mqtt_msg, MQTT_device_family, MQTT_broker, MQTT_feed, sensor_command, sensor_actuacion
 from .models import MQTT_topic
 
 class MQTT_MSG_Admin(admin.ModelAdmin):
@@ -27,5 +27,29 @@ class MQTT_broker_Admin(admin.ModelAdmin):
     list_filter = ('active',)
     search_fields = ('name','server','description')
 admin.site.register(MQTT_broker,MQTT_broker_Admin)
+
+
+#register MQTT_feed
+class MQTT_feed_Admin(admin.ModelAdmin):
+   list_display = ('name','description','topic')
+   list_filter = ('name','description','topic')
+   search_fields = ('name','description','topic')
+admin.site.register(MQTT_feed,MQTT_feed_Admin)
+
+#register sensor command
+class sensor_command_Admin(admin.ModelAdmin):
+   list_display = ('device_id','circuit','actuacion')
+   list_filter = ('device_id','circuit','actuacion')
+   search_fields = ('device_id','circuit','actuacion')
+admin.site.register(sensor_command,sensor_command_Admin)
+
+#register sensor actuacion
+class sensor_actuacion_Admin(admin.ModelAdmin):
+    list_display = ('tipo','command','description')
+    list_filter = ('tipo','command','description')
+    search_fields = ('tipo','command','description')
+admin.site.register(sensor_actuacion,sensor_actuacion_Admin)
+
+
 
 
