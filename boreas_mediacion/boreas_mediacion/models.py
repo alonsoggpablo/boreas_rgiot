@@ -1,6 +1,7 @@
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from . import mqtt
 
 
 class mqtt_msg(models.Model):
@@ -69,22 +70,43 @@ class MQTT_feed(models.Model):
 class sensor_actuacion(models.Model):
     tipo=models.CharField(max_length=100)
     command=models.CharField(max_length=100)
+    parameter=models.CharField(max_length=100)
     description=models.CharField(max_length=100)
     def __str__(self):
         return self.tipo
 class sensor_command(models.Model):
     actuacion=models.ForeignKey(sensor_actuacion,on_delete=models.CASCADE)
-    device_id=models.ForeignKey(mqtt_msg,on_delete=models.CASCADE,limit_choices_to={'device_id__icontains':'-'})
+    device_id=models.ForeignKey(mqtt_msg,on_delete=models.CASCADE,limit_choices_to={'feed__iexact':'shellies','device_id__icontains':'-'})
     circuit=models.IntegerField(default=0)
 
     def __str__(self):
         return self.actuacion.description
 
+class router_parameter(models.Model):
+    parameter=models.CharField(max_length=100)
+    description=models.CharField(max_length=100)
+    def __str__(self):
+        return self.parameter
+class router_get(models.Model):
+    parameter=models.ForeignKey(router_parameter,on_delete=models.CASCADE)
+    device_id=models.ForeignKey(mqtt_msg,on_delete=models.CASCADE,limit_choices_to={'feed__iexact':'router'})
+    def __str__(self):
+        return self.parameter.parameter+'_'+self.device_id.device_id
+
 @receiver(post_save, sender=sensor_command)
 def send_command(sender, instance,created, **kwargs):
     if created:
         device_id=instance.device_id.device_id
-        payload=instance.actuacion.command.replace('device_id',device_id)
-        print('sending command',payload)
-        # mqtt.client.publish(instance.device_id.device_id,instance.actuacion.command)
+        topic=instance.actuacion.command.replace('device_id',device_id)
+        print('sending command',topic,instance.actuacion.parameter)
+        mqtt.client.publish(topic,instance.actuacion.parameter)
+        instance.delete()
+
+@receiver(post_save, sender=router_get)
+def get_router_parameter(sender, instance,created, **kwargs):
+    if created:
+        device_id=instance.device_id.device_id
+        topic='get/serial/command'.replace('serial',device_id)
+        print('sending command',topic,instance.parameter.parameter)
+        mqtt.client.publish(topic,instance.parameter.parameter)
         instance.delete()

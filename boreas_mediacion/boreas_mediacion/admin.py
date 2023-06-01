@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import mqtt_msg, MQTT_device_family, MQTT_broker, MQTT_feed, sensor_command, sensor_actuacion
+from .models import mqtt_msg, MQTT_device_family, MQTT_broker, MQTT_feed, sensor_command, sensor_actuacion, router_get, \
+    router_parameter
 from .models import MQTT_topic
 
 class MQTT_MSG_Admin(admin.ModelAdmin):
@@ -50,6 +51,20 @@ class sensor_actuacion_Admin(admin.ModelAdmin):
     search_fields = ('tipo','command','description')
 admin.site.register(sensor_actuacion,sensor_actuacion_Admin)
 
+#register router_get
+class router_get_Admin(admin.ModelAdmin):
+    list_display = ('device_id','parameter')
+    list_filter = ('device_id','parameter')
+    search_fields = ('device_id','parameter')
+
+admin.site.register(router_get,router_get_Admin)
+
+#register router_parameter
+class router_parameter_Admin(admin.ModelAdmin):
+    list_display = ('parameter','description')
+    list_filter = ('parameter','description')
+    search_fields = ('parameter','description')
+admin.site.register(router_parameter,router_parameter_Admin)
 
 
 

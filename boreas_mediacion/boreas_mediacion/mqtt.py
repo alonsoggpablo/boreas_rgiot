@@ -187,39 +187,6 @@ def find_pattern(pattern, string):
     match = re.search(pattern, string)
     return match.group() if match else None
 
-# def sensor_message_handler_back(payload,topic):
-#     mqtt_dm_topic=MQTT_device_measure_topic(topic)
-#     mqtt_dm_payload=MQTT_device_measure_payload(payload)
-#
-#     id=mqtt_dm_topic.get_id()
-#     circuit=mqtt_dm_topic.get_circuit()
-#     type=mqtt_dm_topic.get_type()
-#     relay=mqtt_dm_topic.get_relay()
-#     parameter=mqtt_dm_topic.get_parameter()
-#     feed=mqtt_dm_topic.get_feed()
-#     value=mqtt_dm_payload.get_value()
-#
-#     mqtt_dm=MQTT_device_measure(id,circuit,type,relay,feed)
-#     mqtt_dm_dict=mqtt_dm.MQTT_to_dict()
-#     mqtt_dm_dict['measure'][parameter]=value
-#
-#     if relay == 'no_relay' or relay=='ext_temperatures' or relay=='announce':
-#         mqtt_dm_dict['measure']=value
-#
-#     device=id+'_'+circuit+'_'+type+'_'+relay
-#
-#     if relay=='relay' or relay == 'no_relay' or relay == 'ext_temperatures' or parameter == 'no_parameter' or relay == 'announce':
-#         reported_measure(device=mqtt_dm_dict['device'], measures=mqtt_dm_dict['measure'],device_id=id,feed=feed).save()
-#         try:
-#             reported_measure.objects.filter(device=mqtt_dm_dict['device'],report_time__lt=timezone.now()-timedelta(minutes=5)).delete()
-#         except:pass
-#
-#     if relay == 'emeter':
-#
-#         try:
-#             mqtt_msg(device=mqtt_dm_dict['device'],measures=mqtt_dm_dict['measure'],device_id=id,feed=feed).save()
-#         except:
-#             update_device_field(mqtt_dm_dict['device'], parameter, value)
 def sensor_message_handler(payload,topic):
     mqtt_dm_topic=MQTT_msg_topic(topic)
     mqtt_dm_payload=MQTT_msg_payload(payload)
