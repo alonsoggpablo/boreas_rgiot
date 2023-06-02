@@ -14,7 +14,7 @@ import psycopg2
 from datetime import datetime,timedelta
 from django.utils import timezone
 django.setup()
-from .models import mqtt_msg, reported_measure, MQTT_broker, MQTT_topic, MQTT_tx, MQTT_feed
+from .models import mqtt_msg, reported_measure, MQTT_broker, MQTT_topic, MQTT_tx, MQTT_feed, sensor_command, router_get
 
 dbHost = settings.DATABASES['default']['HOST']
 dbUsername = settings.DATABASES['default']['USER']
@@ -388,4 +388,23 @@ client.connect(
 def MQTT_tx_post_save(sender, instance, created, **kwargs):
     if created:
         client.publish(instance.topic,instance.payload)
+        instance.delete()
+
+
+@receiver(post_save, sender=sensor_command)
+def send_command(sender, instance,created, **kwargs):
+    if created:
+        device_id=instance.device_id.device_id
+        topic=instance.actuacion.command.replace('device_id',device_id)
+        print('sending command',topic,instance.actuacion.parameter)
+        client.publish(topic,instance.actuacion.parameter)
+        instance.delete()
+
+@receiver(post_save, sender=router_get)
+def get_router_parameter(sender, instance,created, **kwargs):
+    if created:
+        device_id=instance.device_id.device_id
+        topic='get/serial/command'.replace('serial',device_id)
+        print('sending command',topic,instance.parameter.parameter)
+        client.publish(topic,instance.parameter.parameter)
         instance.delete()
