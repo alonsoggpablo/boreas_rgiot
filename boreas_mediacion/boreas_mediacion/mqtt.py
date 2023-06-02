@@ -236,27 +236,6 @@ def general_message_handler(payload,topic):
     except:
         mqtt_msg.objects.filter(device=mqtt_dm_topic.topic).update(device=mqtt_dm_topic.topic, measures=mqtt_dm_payload.measure, report_time=timezone.now())
 
-    #
-    # device_id=''
-    # feed=''
-    # try:
-    #    device_id = ((find_pattern(r'/(?:(?!/).)', mqtt_dm_topic.topic) or
-    #               json.loads(mqtt_dm_payload.measure)['device']['id']) or 'no_device_id').strip("/")
-    # except:pass
-    # try:
-    #     feed = mqtt_dm_topic.get_feed()
-    # except:pass
-    #
-    # if mqtt_msg.objects.filter(device=mqtt_dm_topic.topic + '_' + device_id).exists():
-    #     mqtt_msg.objects.filter(device=mqtt_dm_topic.topic + '_' + device_id
-    #                             ).update(measures=mqtt_dm_payload.measure, report_time=timezone.now())
-    # else:
-    #     try:
-    #
-    #         mqtt_msg(device=mqtt_dm_topic.topic + '_' + device_id, measures=mqtt_dm_payload.measure,
-    #                  device_id=device_id, feed=feed).save()
-    #     except:
-    #         pass
 
 def router_message_handler(payload,topic):
 
