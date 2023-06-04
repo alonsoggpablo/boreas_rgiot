@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import mqtt_msg, MQTT_device_family, MQTT_broker, MQTT_feed, sensor_command, sensor_actuacion, router_get, \
-    router_parameter
+    router_parameter, reported_measure
 from .models import MQTT_topic
 
 class MQTT_MSG_Admin(admin.ModelAdmin):
@@ -64,6 +64,13 @@ class router_parameter_Admin(admin.ModelAdmin):
     list_filter = ('parameter','description')
     search_fields = ('parameter','description')
 admin.site.register(router_parameter,router_parameter_Admin)
+
+#register reported_measure
+class reported_measure_Admin(admin.ModelAdmin):
+    list_display = ('feed','device_id','measures','report_time')
+    list_filter = ('feed','report_time','device_id')
+    search_fields = ('device_id','measures','report_time')
+admin.site.register(reported_measure,reported_measure_Admin)
 
 
 
