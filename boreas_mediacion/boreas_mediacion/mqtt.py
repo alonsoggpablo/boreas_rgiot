@@ -203,16 +203,26 @@ def sensor_message_handler(payload,topic):
     mqtt_dm_dict=mqtt_dm.MQTT_to_dict()
     mqtt_dm_dict['measure'][parameter]=value
 
-    if relay == 'no_relay' or relay=='ext_temperatures' or relay=='announce':
-        mqtt_dm_dict['measure']=value
+    # if relay == 'no_relay' or 'temperature' in relay or relay=='announce':
+    #     mqtt_dm_dict['measure']=value
+    #
+    # device=id+'_'+circuit+'_'+type+'_'+relay
 
-    device=id+'_'+circuit+'_'+type+'_'+relay
+    if relay=='relay' or relay == 'no_relay' or 'temperature' in relay or parameter == 'no_parameter' or relay == 'announce':
+        # reported_measure(device=mqtt_dm_dict['device'], measures=mqtt_dm_dict['measure'],device_id=id,feed=feed).save()
+        # try:
+        #     reported_measure.objects.filter(device=mqtt_dm_dict['device'],report_time__lt=timezone.now()-timedelta(minutes=5)).delete()
+        # except:pass
 
-    if relay=='relay' or relay == 'no_relay' or relay == 'ext_temperatures' or parameter == 'no_parameter' or relay == 'announce':
-        reported_measure(device=mqtt_dm_dict['device'], measures=mqtt_dm_dict['measure'],device_id=id,feed=feed).save()
+        mqtt_dm_topic = MQTT_device_measure_topic(topic)
+        mqtt_dm_payload = MQTT_device_measure_payload(payload)
         try:
-            reported_measure.objects.filter(device=mqtt_dm_dict['device'],report_time__lt=timezone.now()-timedelta(minutes=5)).delete()
-        except:pass
+            mqtt_msg(device=mqtt_dm_topic.topic, measures=mqtt_dm_payload.measure,device_id=id,feed='shellies/'+relay).save()
+        except:
+            mqtt_msg.objects.filter(device=mqtt_dm_topic.topic).update(device=mqtt_dm_topic.topic,
+                                                                       measures=mqtt_dm_payload.measure,
+                                                                       report_time=timezone.now(),device_id=id,feed='shellies/'+relay)
+
 
     if relay == 'emeter':
 
