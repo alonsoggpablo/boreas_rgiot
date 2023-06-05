@@ -5,7 +5,7 @@ from .models import MQTT_topic
 
 class MQTT_MSG_Admin(admin.ModelAdmin):
     list_display = ('device_id','device','measures','report_time')
-    list_filter = ('feed','device_id')
+    list_filter = ('feed','report_time','device_id')
 admin.site.register(mqtt_msg,MQTT_MSG_Admin)
 
 # Register your models here.
