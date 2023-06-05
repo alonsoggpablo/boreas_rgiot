@@ -4,7 +4,7 @@ from .models import mqtt_msg, MQTT_device_family, MQTT_broker, MQTT_feed, sensor
 from .models import MQTT_topic
 
 class MQTT_MSG_Admin(admin.ModelAdmin):
-    list_display = ('device_id','device','measures','report_time')
+    list_display = ('device_id','device','measures','feed','report_time')
     list_filter = ('feed','report_time','device_id')
     search_fields = ('device_id','device','measures','report_time')
 admin.site.register(mqtt_msg,MQTT_MSG_Admin)
