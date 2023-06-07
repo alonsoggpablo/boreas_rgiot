@@ -241,10 +241,19 @@ def sensor_message_handler(payload,topic):
 def general_message_handler(payload,topic):
     mqtt_dm_topic = MQTT_device_measure_topic(topic)
     mqtt_dm_payload = MQTT_device_measure_payload(payload)
+    feed= mqtt_dm_topic.get_feed()
     try:
-        mqtt_msg(device=mqtt_dm_topic.topic, measures=mqtt_dm_payload.measure).save()
+        device_id=json.loads(payload)['device']['id']
     except:
-        mqtt_msg.objects.filter(device=mqtt_dm_topic.topic).update(device=mqtt_dm_topic.topic, measures=mqtt_dm_payload.measure, report_time=timezone.now())
+        try: device_id=json.loads(payload)['id']
+        except:
+            try:device_id=mqtt_dm_topic.get_id()
+            except:device_id='no_device_id'
+
+    try:
+        mqtt_msg(device=mqtt_dm_topic.topic, measures=mqtt_dm_payload.measure,feed=feed,device_id=device_id).save()
+    except:
+        mqtt_msg.objects.filter(device=mqtt_dm_topic.topic).update(device=mqtt_dm_topic.topic, measures=mqtt_dm_payload.measure, report_time=timezone.now(),feed=feed,device_id=device_id)
 
 
 def router_message_handler(payload,topic):
