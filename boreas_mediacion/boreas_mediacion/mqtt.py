@@ -251,9 +251,9 @@ def general_message_handler(payload,topic):
             except:device_id='no_device_id'
 
     try:
-        mqtt_msg(device=mqtt_dm_topic.topic, measures=mqtt_dm_payload.measure,feed=feed,device_id=device_id).save()
+        mqtt_msg(device=mqtt_dm_topic.topic+'_'+device_id, measures=mqtt_dm_payload.measure,feed=feed,device_id=device_id).save()
     except:
-        mqtt_msg.objects.filter(device=mqtt_dm_topic.topic).update(device=mqtt_dm_topic.topic, measures=mqtt_dm_payload.measure, report_time=timezone.now(),feed=feed,device_id=device_id)
+        mqtt_msg.objects.filter(device=mqtt_dm_topic.topic+'_'+device_id).update(device=mqtt_dm_topic.topic+'_'+device_id, measures=mqtt_dm_payload.measure, report_time=timezone.now(),feed=feed,device_id=device_id)
 
 
 def router_message_handler(payload,topic):
