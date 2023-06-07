@@ -42,6 +42,12 @@ class sensor_command_Admin(admin.ModelAdmin):
    list_display = ('device_id','circuit','actuacion')
    list_filter = ('device_id','circuit','actuacion')
    search_fields = ('device_id','circuit','actuacion')
+
+   def formfield_for_foreignkey(self, db_field, request, **kwargs):
+       if db_field.name == 'device_id':
+           kwargs['queryset'] = mqtt_msg.objects.order_by('device_id').distinct('device_id')
+       return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 admin.site.register(sensor_command,sensor_command_Admin)
 
 #register sensor actuacion
@@ -56,6 +62,11 @@ class router_get_Admin(admin.ModelAdmin):
     list_display = ('device_id','parameter')
     list_filter = ('device_id','parameter')
     search_fields = ('device_id','parameter')
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'device_id':
+            kwargs['queryset'] = mqtt_msg.objects.order_by('device_id').distinct('device_id')
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 admin.site.register(router_get,router_get_Admin)
 

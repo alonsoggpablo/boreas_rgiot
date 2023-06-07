@@ -93,20 +93,3 @@ class router_get(models.Model):
     def __str__(self):
         return self.parameter.parameter+'_'+self.device_id.device_id
 
-# @receiver(post_save, sender=sensor_command)
-# def send_command(sender, instance,created, **kwargs):
-#     if created:
-#         device_id=instance.device_id.device_id
-#         topic=instance.actuacion.command.replace('device_id',device_id)
-#         print('sending command',topic,instance.actuacion.parameter)
-#         mqtt.client.publish(topic,instance.actuacion.parameter)
-#         instance.delete()
-#
-# @receiver(post_save, sender=router_get)
-# def get_router_parameter(sender, instance,created, **kwargs):
-#     if created:
-#         device_id=instance.device_id.device_id
-#         topic='get/serial/command'.replace('serial',device_id)
-#         print('sending command',topic,instance.parameter.parameter)
-#         mqtt.client.publish(topic,instance.parameter.parameter)
-#         instance.delete()
