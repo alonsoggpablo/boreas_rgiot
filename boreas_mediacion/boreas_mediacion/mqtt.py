@@ -312,9 +312,16 @@ def sensor_report_message_handler(payload,topic):
     mqtt_dm_topic=MQTT_msg_topic(topic)
     mqtt_dm_payload=MQTT_msg_payload(payload)
     feed = mqtt_dm_topic.get_0()
-    device=json.loads(payload.replace("'",'"'))['device']
-    device_id = device['id']
-    measures=json.loads(payload.replace("'",'"'))['measures']
+    try:
+        device=json.loads(payload.replace("'",'"'))['device']
+        device_id = device['id']
+    except:
+        device='no_device_id'
+        device_id='no_device_id'
+
+    try:
+        measures=json.loads(payload.replace("'",'"'))['measures']
+    except:measures='no_measures'
 
     if mqtt_msg.objects.filter(device=device).exists():
         mqtt_msg.objects.filter(device=device).update(measures=measures, report_time=timezone.now())
