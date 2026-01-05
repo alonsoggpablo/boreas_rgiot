@@ -4,12 +4,19 @@ from django.db import models
 # from . import mqtt
 
 
+class MQTT_device_family(models.Model):
+    name=models.CharField(max_length=100)
+    def __str__(self):
+        return self.name
+
+
 class mqtt_msg(models.Model):
     report_time=models.DateTimeField(auto_now=True)
-    device=models.JSONField(unique=True)
-    device_id=models.CharField(max_length=100)
-    measures=models.JSONField()
-    feed=models.CharField(max_length=100)
+    device=models.JSONField(unique=True, default=dict)
+    device_id=models.CharField(max_length=100, default='unknown')
+    measures=models.JSONField(default=dict)
+    feed=models.CharField(max_length=100, default='unknown')
+    device_family=models.ForeignKey(MQTT_device_family, on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
         ordering = ['device_id']
@@ -18,18 +25,12 @@ class mqtt_msg(models.Model):
 
 class reported_measure(models.Model):
     report_time=models.DateTimeField(auto_now=True)
-    device=models.JSONField()
-    device_id=models.CharField(max_length=100)
-    measures=models.JSONField()
-    feed=models.CharField(max_length=100)
+    device=models.JSONField(default=dict)
+    device_id=models.CharField(max_length=100, default='unknown')
+    measures=models.JSONField(default=dict)
+    feed=models.CharField(max_length=100, default='unknown')
     def __str__(self):
         return self.device_id
-
-
-class MQTT_device_family(models.Model):
-    name=models.CharField(max_length=100)
-    def __str__(self):
-        return self.name
 
 class MQTT_broker(models.Model):
     name=models.CharField(max_length=100)

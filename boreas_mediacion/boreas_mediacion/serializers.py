@@ -1,24 +1,23 @@
 from .models import mqtt_msg, reported_measure, MQTT_tx, sensor_command
 from rest_framework import serializers
 
-class mqtt_msgSerializer(serializers.HyperlinkedModelSerializer):
+class mqtt_msgSerializer(serializers.ModelSerializer):
     class Meta:
         model = mqtt_msg
-        fields = ('report_time', 'device', 'measures')
+        fields = ('id', 'report_time', 'device', 'device_id', 'measures', 'feed')
 
-class reported_measureSerializer(serializers.HyperlinkedModelSerializer):
+class reported_measureSerializer(serializers.ModelSerializer):
     class Meta:
         model = reported_measure
-        fields = ('report_time', 'device', 'measures')
+        fields = ('id', 'report_time', 'device', 'device_id', 'measures', 'feed')
 
 
-class MQTT_tx_serializer(serializers.HyperlinkedModelSerializer):
+class MQTT_tx_serializer(serializers.ModelSerializer):
     class Meta:
         model = MQTT_tx
-        fields = ('topic', 'payload')
+        fields = ('id', 'topic', 'payload')
 
-class sensor_command_serializer(serializers.HyperlinkedModelSerializer):
+class sensor_command_serializer(serializers.ModelSerializer):
     class Meta:
         model = sensor_command
-        fields = ('device_id', 'circuit','actuacion')
-
+        fields = ('id', 'device_id', 'circuit','actuacion')

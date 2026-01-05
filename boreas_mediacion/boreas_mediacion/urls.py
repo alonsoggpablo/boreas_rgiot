@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include, re_path
+from django.views.generic import RedirectView
 from rest_framework import routers
 
 from . import views
@@ -26,12 +27,14 @@ router.register(r'mqtt_msgs', views.mqtt_msgViewSet)
 
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path('', RedirectView.as_view(url='/api/mqtt_msgs/', permanent=False)),
+    path('api/', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('admin/', admin.site.urls),
-    path('publish/', PublishView.as_view(), name='publish'),
-    re_path(r'^mqtt_msg-list/$', views.mqtt_msgViewList.as_view()),
-    re_path(r'^reported_measure-list/$', views.reported_measureViewList.as_view()),
+    path('api/publish/', PublishView.as_view(), name='publish'),
+    path('api/mqtt-control/', views.mqtt_control, name='mqtt_control'),
+    re_path(r'^api/mqtt_msg-list/$', views.mqtt_msgViewList.as_view()),
+    re_path(r'^api/reported_measure-list/$', views.reported_measureViewList.as_view()),
 
 ]
 
