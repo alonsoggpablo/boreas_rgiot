@@ -1,0 +1,35 @@
+# Airflow Dockerfile
+FROM python:3.11-slim
+
+WORKDIR /opt/airflow
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
+    libpq-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements.txt /opt/airflow/
+COPY airflow-requirements.txt /opt/airflow/
+COPY airflow-entrypoint.sh /opt/airflow/
+
+# Install Python packages
+RUN pip install --no-cache-dir -r /opt/airflow/airflow-requirements.txt && \
+    pip install --no-cache-dir -r /opt/airflow/requirements.txt && \
+    pip install --force-reinstall typing_extensions>=4.10.0
+
+# Make entrypoint executable
+RUN chmod +x /opt/airflow/airflow-entrypoint.sh
+
+# Create airflow user
+RUN useradd -m -u 50000 airflow || true
+
+# Create necessary directories
+RUN mkdir -p /opt/airflow/dags /opt/airflow/logs /opt/airflow/plugins && \
+    chown -R airflow:airflow /opt/airflow
+
+WORKDIR /app
+
+EXPOSE 8080 5555

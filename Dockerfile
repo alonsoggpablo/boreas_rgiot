@@ -28,8 +28,8 @@ COPY ./boreas_mediacion /app/
 # Crear directorio para archivos estáticos
 RUN mkdir -p /app/staticfiles /app/media
 
-# Recopilar archivos estáticos
-RUN python manage.py collectstatic --noinput --clear
+# Recopilar archivos estáticos (será ejecutado en el entrypoint)
+# RUN python manage.py collectstatic --noinput --clear 2>/dev/null || true
 
 # Crear usuario no-root para seguridad
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app

@@ -24,6 +24,10 @@ from .views import PublishView
 
 router = routers.DefaultRouter()
 router.register(r'mqtt_msgs', views.mqtt_msgViewSet)
+router.register(r'wirelesslogic/sims', views.WirelessLogic_SIMViewSet, basename='wirelesslogic-sim')
+router.register(r'wirelesslogic/usage', views.WirelessLogic_UsageViewSet, basename='wirelesslogic-usage')
+router.register(r'sigfox/devices', views.SigfoxDeviceViewSet, basename='sigfox-device')
+router.register(r'sigfox/readings', views.SigfoxReadingViewSet, basename='sigfox-reading')
 
 
 urlpatterns = [
@@ -33,6 +37,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/publish/', PublishView.as_view(), name='publish'),
     path('api/mqtt-control/', views.mqtt_control, name='mqtt_control'),
+    path('api/sigfox', views.SigfoxCallbackView.as_view(), name='sigfox'),
+    path('api/sigfox/gas', views.SigfoxCallbackView.as_view(), name='sigfox_gas'),
     re_path(r'^api/mqtt_msg-list/$', views.mqtt_msgViewList.as_view()),
     re_path(r'^api/reported_measure-list/$', views.reported_measureViewList.as_view()),
 

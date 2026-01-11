@@ -1,4 +1,14 @@
-/venv
+﻿/venv
 /.idea
 /boreas_mediacion/boreas_mediacion/settings.py
-/boreas_mediacion/boreas_mediacion/migrations/
+/airflow/logs/
+/airflow/plugins/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env.local
+*.pyc
+*.db
+*.sqlite3
+/db.sqlite3
+.DS_Store
