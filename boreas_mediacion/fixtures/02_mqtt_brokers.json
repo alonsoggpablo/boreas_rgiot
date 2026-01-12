@@ -1,0 +1,16 @@
+[
+{
+  "model": "boreas_mediacion.mqtt_broker",
+  "pk": 1,
+  "fields": {
+    "name": "rgiot",
+    "server": "mqtt.solutions-iot.es",
+    "port": 8883,
+    "keepalive": 60,
+    "description": "broker RGIoT",
+    "active": true,
+    "user": "boreas",
+    "password": "RGIoT"
+  }
+}
+]

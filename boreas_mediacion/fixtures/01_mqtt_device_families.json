@@ -1,0 +1,93 @@
+[
+{
+  "model": "boreas_mediacion.mqtt_device_family",
+  "pk": 1,
+  "fields": {
+    "name": "AEMET"
+  }
+},
+{
+  "model": "boreas_mediacion.mqtt_device_family",
+  "pk": 2,
+  "fields": {
+    "name": "IAQ_Measures"
+  }
+},
+{
+  "model": "boreas_mediacion.mqtt_device_family",
+  "pk": 3,
+  "fields": {
+    "name": "aemet"
+  }
+},
+{
+  "model": "boreas_mediacion.mqtt_device_family",
+  "pk": 4,
+  "fields": {
+    "name": "shellies"
+  }
+},
+{
+  "model": "boreas_mediacion.mqtt_device_family",
+  "pk": 5,
+  "fields": {
+    "name": "shellies2"
+  }
+},
+{
+  "model": "boreas_mediacion.mqtt_device_family",
+  "pk": 6,
+  "fields": {
+    "name": "$SYS"
+  }
+},
+{
+  "model": "boreas_mediacion.mqtt_device_family",
+  "pk": 7,
+  "fields": {
+    "name": "gadget"
+  }
+},
+{
+  "model": "boreas_mediacion.mqtt_device_family",
+  "pk": 8,
+  "fields": {
+    "name": "EM_Measures"
+  }
+},
+{
+  "model": "boreas_mediacion.mqtt_device_family",
+  "pk": 9,
+  "fields": {
+    "name": "RPC"
+  }
+},
+{
+  "model": "boreas_mediacion.mqtt_device_family",
+  "pk": 10,
+  "fields": {
+    "name": "RESP"
+  }
+},
+{
+  "model": "boreas_mediacion.mqtt_device_family",
+  "pk": 11,
+  "fields": {
+    "name": "IAQ_RPC"
+  }
+},
+{
+  "model": "boreas_mediacion.mqtt_device_family",
+  "pk": 12,
+  "fields": {
+    "name": "router"
+  }
+},
+{
+  "model": "boreas_mediacion.mqtt_device_family",
+  "pk": 13,
+  "fields": {
+    "name": "rgiot"
+  }
+}
+]
