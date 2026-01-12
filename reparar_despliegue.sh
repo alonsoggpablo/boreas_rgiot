@@ -69,19 +69,35 @@ echo ""
 
 # 6. Crear base de datos y usuario (usando el usuario real)
 echo -e "${YELLOW}6. Creando base de datos y usuario...${NC}"
-PSQL_BASE="docker-compose exec -T db psql -U $DB_USER -d postgres"
+DB_PASS_SAFE=${DB_PASS:-boreas_password}
 
-# Crear DB si no existe
-$PSQL_BASE -c "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_database WHERE datname='$DB_NAME') THEN CREATE DATABASE $DB_NAME; END IF; END $$;" 2>/dev/null || echo "   Base de datos ya existe"
+docker-compose exec -T db psql -U "$DB_USER" -d postgres <<SQL
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_database WHERE datname='${DB_NAME}') THEN
+        CREATE DATABASE "${DB_NAME}";
+    END IF;
+END
+$$;
 
-# Asegurar rol principal
-$PSQL_BASE -c "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='$DB_USER') THEN CREATE ROLE $DB_USER WITH LOGIN PASSWORD '${DB_PASS:-boreas_password'}'; END IF; END $$;" 2>/dev/null || echo "   Usuario ya existe"
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='${DB_USER}') THEN
+        CREATE ROLE "${DB_USER}" WITH LOGIN PASSWORD '${DB_PASS_SAFE}';
+    END IF;
+END
+$$;
 
-# Crear rol postgres si falta (algunos comandos externos lo esperan)
-$PSQL_BASE -c "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='postgres') THEN CREATE ROLE postgres WITH SUPERUSER LOGIN PASSWORD 'postgres'; END IF; END $$;" 2>/dev/null || true
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='postgres') THEN
+        CREATE ROLE postgres WITH SUPERUSER LOGIN PASSWORD 'postgres';
+    END IF;
+END
+$$;
 
-# Conceder privilegios
-$PSQL_BASE -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;" 2>/dev/null || true
+GRANT ALL PRIVILEGES ON DATABASE "${DB_NAME}" TO "${DB_USER}";
+SQL
 
 echo -e "${GREEN}✓ Base de datos y usuarios verificados${NC}"
 echo ""
