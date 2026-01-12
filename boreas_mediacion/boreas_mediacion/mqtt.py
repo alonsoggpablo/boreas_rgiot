@@ -253,7 +253,8 @@ def general_message_handler(payload,topic):
         except:
             mqtt_msg.objects.filter(device=mqtt_dm_topic.topic+'_'+device_id).update(device=mqtt_dm_topic.topic+'_'+device_id, measures=mqtt_dm_payload.measure, report_time=timezone.now(),feed=feed,device_id=device_id)
     except Exception as e:
-        logger.warning(f"Error in general_message_handler - {str(e)}")
+        # Silently ignore errors in general_message_handler
+        pass
 
 
 def router_message_handler(payload,topic):
