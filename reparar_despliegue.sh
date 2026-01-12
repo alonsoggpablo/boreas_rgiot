@@ -127,8 +127,9 @@ if docker-compose exec -T web bash -lc "ls -1 /app/fixtures/*.json" >/dev/null 2
     echo -e "${GREEN}✓ Fixtures cargados${NC}"
 else
     echo -e "${YELLOW}No se encontraron fixtures en /app/fixtures/*.json. Intentando copiar desde host...${NC}"
-    # Copiar fixtures desde el host al contenedor (contener nombre boreas_app en docker-compose.yml)
     if [ -d "$(pwd)/boreas_mediacion/fixtures" ]; then
+        # Crear carpeta destino dentro del contenedor y copiar
+        docker-compose exec -T web mkdir -p /app/fixtures
         docker cp "$(pwd)/boreas_mediacion/fixtures/." boreas_app:/app/fixtures/ 2>/dev/null || true
     fi
 
