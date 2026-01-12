@@ -231,9 +231,9 @@ def sensor_message_handler(payload,topic):
                 if topic_feed:
                     MQTT_tx(topic=topic_feed.strip('/#'),payload=payload_dict).save()
             except Exception as e:
-                print(f"Warning: Could not process total_returned - {str(e)}")
+                logger.warning(f"Could not process total_returned - {str(e)}")
     except Exception as e:
-        print(f"Warning: Error in sensor_message_handler - {str(e)}")
+        logger.warning(f"Error in sensor_message_handler - {str(e)}")
 
 def general_message_handler(payload,topic):
     try:
@@ -253,7 +253,7 @@ def general_message_handler(payload,topic):
         except:
             mqtt_msg.objects.filter(device=mqtt_dm_topic.topic+'_'+device_id).update(device=mqtt_dm_topic.topic+'_'+device_id, measures=mqtt_dm_payload.measure, report_time=timezone.now(),feed=feed,device_id=device_id)
     except Exception as e:
-        print(f"Warning: Error in general_message_handler - {str(e)}")
+        logger.warning(f"Error in general_message_handler - {str(e)}")
 
 
 def router_message_handler(payload,topic):
@@ -414,7 +414,7 @@ def reported_measure_handler(payload, topic):
                 measures=measures_dict,
                 feed=feed
             ).save()
-            print(f"Reported measure saved: feed={feed}, device_id={device_id}, measures={len(measures_dict)} parameters")
+            logger.debug(f"Reported measure saved: feed={feed}, device_id={device_id}, measures={len(measures_dict)} parameters")
         except Exception as e:
             # Try to update if already exists
             try:
@@ -424,12 +424,12 @@ def reported_measure_handler(payload, topic):
                     report_time=timezone.now(),
                     feed=feed
                 )
-                print(f"Reported measure updated: feed={feed}, device_id={device_id}")
+                logger.debug(f"Reported measure updated: feed={feed}, device_id={device_id}")
             except Exception as update_error:
-                print(f"Warning: Could not save/update reported measure - {str(update_error)}")
+                logger.warning(f"Could not save/update reported measure - {str(update_error)}")
     
     except Exception as e:
-        print(f"Warning: Error in reported_measure_handler - {str(e)}")
+        logger.warning(f"Error in reported_measure_handler - {str(e)}")
 
 
 def get_topics_list():
@@ -484,7 +484,7 @@ def on_message(mqtt_client, userdata, msg):
             if sensor_topic and sensor_topic.strip('/#') in topic:
                 sensor_report_message_handler(payload, topic)
         except Exception as e:
-            print(f"Warning: Could not process sensor report - {str(e)}")
+            logger.warning(f"Could not process sensor report - {str(e)}")
     
     # Handle Router devices
     elif 'router/' in topic:
@@ -495,7 +495,7 @@ def on_message(mqtt_client, userdata, msg):
             if router_topic and router_topic.strip('/#') in topic:
                 router_report_message_handler(payload, topic)
         except Exception as e:
-            print(f"Warning: Could not process router report - {str(e)}")
+            logger.warning(f"Could not process router report - {str(e)}")
     
     # Handle other messages
     else:
@@ -601,7 +601,7 @@ def send_command(sender, instance,created, **kwargs):
     if created and client is not None:
         device_id=instance.device_id.device_id
         topic=instance.actuacion.command.replace('device_id',device_id)
-        print('sending command',topic,instance.actuacion.parameter)
+        logger.debug(f'Sending command to {topic}: {instance.actuacion.parameter}')
         client.publish(topic,instance.actuacion.parameter)
         instance.delete()
 
@@ -610,6 +610,6 @@ def get_router_parameter(sender, instance,created, **kwargs):
     if created:
         device_id=instance.device_id.device_id
         topic='get/serial/command'.replace('serial',device_id)
-        print('sending command',topic,instance.parameter.parameter)
+        logger.debug(f'Sending router command to {topic}: {instance.parameter.parameter}')
         client.publish(topic,instance.parameter.parameter)
         instance.delete()
