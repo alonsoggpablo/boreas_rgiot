@@ -187,10 +187,43 @@ docker-compose exec web python manage.py collectstatic --noinput --clear
 9. CREACIÓN DE SUPERUSUARIO
 ================================================================================
 
-# Crear superusuario de Django
-docker-compose exec web python manage.py createsuperuser
+OPCIÓN 1: Creación interactiva (requiere terminal limpia)
+---------------------------------------------------------
+# Crear superusuario de Django con prompts interactivos
+docker-compose exec web bash -c "python manage.py createsuperuser 2>&1 | grep -v 'Reported measure'"
 
 # Introducir: nombre de usuario, email y contraseña
+
+
+OPCIÓN 2: Creación automática con script (RECOMENDADO)
+-------------------------------------------------------
+# Usar el script proporcionado para crear superusuario 'pablo' con contraseña 'laura10'
+cd /opt/boreas_rgiot
+bash create_superuser.sh
+
+# Este comando:
+# - Crea el usuario 'pablo' con contraseña 'laura10'
+# - O actualiza la contraseña si el usuario ya existe
+# - Suprime los mensajes de MQTT para evitar ruido en la terminal
+
+
+OPCIÓN 3: Crear manualmente sin script
+--------------------------------------
+# Crear un superusuario específico (sin prompts interactivos)
+docker-compose exec web python -c "
+import os, django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'boreas_mediacion.settings')
+django.setup()
+from django.contrib.auth.models import User
+if not User.objects.filter(username='tu_usuario').exists():
+    User.objects.create_superuser('tu_usuario', 'email@example.com', 'tu_contraseña')
+    print('Superusuario creado')
+" 2>&1 | grep -v 'Reported measure'
+
+# Reemplazar:
+# - 'tu_usuario' por el nombre deseado
+# - 'email@example.com' por el email
+# - 'tu_contraseña' por la contraseña
 
 
 ================================================================================
