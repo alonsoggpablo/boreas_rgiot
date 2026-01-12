@@ -19,6 +19,9 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
         },
+        'null': {
+            'class': 'logging.NullHandler',
+        },
     },
     'root': {
         'handlers': ['console'],
@@ -41,8 +44,8 @@ LOGGING = {
             'propagate': False,
         },
         'boreas_mediacion': {
-            'handlers': ['console'],
-            'level': 'WARNING',  # Suppress debug/info messages like "Reported measure updated"
+            'handlers': ['null'],  # Route all boreas_mediacion messages to null handler (discard them)
+            'level': 'DEBUG',
             'propagate': False,
         },
     },
