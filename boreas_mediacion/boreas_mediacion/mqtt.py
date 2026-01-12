@@ -414,7 +414,6 @@ def reported_measure_handler(payload, topic):
                 measures=measures_dict,
                 feed=feed
             ).save()
-            logger.debug(f"Reported measure saved: feed={feed}, device_id={device_id}, measures={len(measures_dict)} parameters")
         except Exception as e:
             # Try to update if already exists
             try:
@@ -424,7 +423,6 @@ def reported_measure_handler(payload, topic):
                     report_time=timezone.now(),
                     feed=feed
                 )
-                logger.debug(f"Reported measure updated: feed={feed}, device_id={device_id}")
             except Exception as update_error:
                 logger.warning(f"Could not save/update reported measure - {str(update_error)}")
     
