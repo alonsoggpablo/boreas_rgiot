@@ -1,0 +1,610 @@
+================================================================================
+INSTRUCCIONES DE DESPLIEGUE - BOREAS RGIOT
+Sistema de Mediación y Gestión IoT
+================================================================================
+
+TABLA DE CONTENIDOS
+-------------------
+1. Requisitos Previos
+2. Preparación del Servidor
+3. Transferencia de Archivos
+4. Configuración de Variables de Entorno
+5. Construcción y Despliegue de Contenedores Docker
+6. Configuración de la Base de Datos
+7. Carga de Datos Iniciales (Fixtures)
+8. Recolección de Archivos Estáticos
+9. Creación de Superusuario
+10. Reinicio de Servicios
+11. Verificación del Despliegue
+12. Despliegue de Apache Airflow (OPCIONAL)
+13. Comandos Útiles
+14. Solución de Problemas
+
+
+================================================================================
+1. REQUISITOS PREVIOS
+================================================================================
+
+En el servidor remoto debe estar instalado:
+- Docker (versión 20.10 o superior)
+- Docker Compose (versión 2.0 o superior)
+- Git (opcional, para clonar el repositorio)
+- Acceso SSH al servidor
+- Puertos 80, 8000 y 5432 disponibles
+- RECOMENDADO: Al menos 2GB de RAM (4GB si se despliega Airflow)
+- RECOMENDADO: Al menos 10GB de espacio en disco
+
+
+================================================================================
+2. PREPARACIÓN DEL SERVIDOR
+================================================================================
+
+# Conectarse al servidor remoto
+ssh usuario@servidor-remoto.com
+
+# Actualizar el sistema (Ubuntu/Debian)
+sudo apt update && sudo apt upgrade -y
+
+# Instalar Docker si no está instalado
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Instalar Docker Compose
+sudo apt install docker-compose-plugin -y
+
+# Verificar versión de Docker Compose instalada
+docker-compose --version
+
+# Agregar usuario al grupo docker (para no usar sudo)
+sudo usermod -aG docker $USER
+
+# Cerrar sesión y volver a conectar para aplicar cambios
+exit
+
+# NOTA: Estas instrucciones usan "docker-compose" (Docker Compose v1)
+# Si tienes v2 instalado, usa "docker compose" (sin guión) en todos los comandos
+
+
+================================================================================
+3. TRANSFERENCIA DE ARCHIVOS
+================================================================================
+
+OPCIÓN A: Usar Git (recomendado)
+---------------------------------
+# En el servidor remoto
+cd /opt  # o la ubicación que prefieras
+sudo mkdir -p boreas_rgiot
+sudo chown $USER:$USER boreas_rgiot
+git clone https://github.com/tu-usuario/boreas_rgiot.git
+cd boreas_rgiot
+
+
+OPCIÓN B: Transferir archivos vía SCP
+--------------------------------------
+# Desde tu máquina local
+scp -r c:\Users\Usuario\Documents\GitHub\boreas_rgiot usuario@servidor-remoto:/opt/
+
+# O comprimir y transferir
+tar -czf boreas_rgiot.tar.gz -C c:\Users\Usuario\Documents\GitHub\ boreas_rgiot
+scp boreas_rgiot.tar.gz usuario@servidor-remoto:/opt/
+ssh usuario@servidor-remoto "cd /opt && tar -xzf boreas_rgiot.tar.gz"
+
+
+================================================================================
+4. CONFIGURACIÓN DE VARIABLES DE ENTORNO
+================================================================================
+
+# En el servidor remoto, dentro del directorio del proyecto
+cd /opt/boreas_rgiot
+
+# Crear archivo .env con las variables de entorno
+nano .env
+
+# Contenido del archivo .env (AJUSTAR VALORES):
+# ----------------------------------------------
+DEBUG=False
+SECRET_KEY=tu-clave-secreta-muy-segura-aqui-cambiar-siempre
+ALLOWED_HOSTS=tu-dominio.com,www.tu-dominio.com,IP-del-servidor,localhost
+
+# Base de datos PostgreSQL
+DATABASE_URL=postgresql://boreas_user:boreas_password@db:5432/boreas_db
+POSTGRES_DB=boreas_db
+POSTGRES_USER=boreas_user
+POSTGRES_PASSWORD=contraseña-segura-aqui
+
+# Configuración de Email
+EMAIL_HOST=mail.rggestionyenergia.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=tu-email@dominio.com
+EMAIL_HOST_PASSWORD=tu-contraseña-email
+EMAIL_USE_TLS=True
+DEFAULT_FROM_EMAIL=tu-email@dominio.com
+
+# MQTT (si se usa)
+MQTT_BROKER=broker.hivemq.com
+MQTT_PORT=1883
+MQTT_USERNAME=
+MQTT_PASSWORD=
+
+# Servicios externos (si se usan)
+DATADIS_USERNAME=tu-usuario
+DATADIS_PASSWORD=tu-contraseña
+WIRELESSLOGIC_API_KEY=tu-api-key
+AEMET_API_KEY=tu-api-key-aemet
+
+# Guardar archivo: Ctrl+O, Enter, Ctrl+X
+
+# IMPORTANTE: Cambiar permisos del archivo .env
+chmod 600 .env
+
+
+================================================================================
+5. CONSTRUCCIÓN Y DESPLIEGUE DE CONTENEDORES DOCKER
+================================================================================
+
+# Asegurarse de estar en el directorio del proyecto
+cd /opt/boreas_rgiot
+
+# Construir e iniciar los contenedores
+docker-compose build
+docker-compose up -d
+
+# Verificar estado (deberías ver: boreas_db, boreas_app, boreas_nginx)
+docker-compose ps
+
+# Ver logs si hay problemas
+docker-compose logs -f
+
+
+================================================================================
+6. CONFIGURACIÓN DE LA BASE DE DATOS
+================================================================================
+
+# Esperar unos segundos y ejecutar migraciones
+sleep 10
+docker-compose exec web python manage.py migrate
+
+
+================================================================================
+7. CARGA DE DATOS INICIALES (FIXTURES)
+================================================================================
+
+# Cargar datos iniciales (brokers MQTT, familias de dispositivos, etc.)
+docker-compose exec web bash -c "python manage.py loaddata fixtures/*.json"
+
+# IMPORTANTE: Revisar credenciales de brokers MQTT en el panel de admin
+
+
+================================================================================
+8. RECOLECCIÓN DE ARCHIVOS ESTÁTICOS
+================================================================================
+
+# Recopilar archivos estáticos
+docker-compose exec web python manage.py collectstatic --noinput --clear
+
+
+================================================================================
+9. CREACIÓN DE SUPERUSUARIO
+================================================================================
+
+# Crear superusuario de Django
+docker-compose exec web python manage.py createsuperuser
+
+# Introducir: nombre de usuario, email y contraseña
+
+
+================================================================================
+10. REINICIO DE SERVICIOS
+================================================================================
+
+# Reiniciar servicios individuales
+docker-compose restart nginx
+docker-compose restart web
+
+# Reiniciar todo
+docker-compose restart
+
+# Reconstruir tras cambios
+docker-compose down
+docker-compose up -d --build
+
+
+================================================================================
+11. VERIFICACIÓN DEL DESPLIEGUE
+================================================================================
+
+# Verificar estado
+docker-compose ps
+
+# Ver logs si hay problemas
+docker-compose logs web --tail=50
+docker-compose logs nginx --tail=50
+
+# Probar la aplicación
+curl http://localhost/admin/
+
+# Acceder al panel de administración
+# Navegador: http://IP-del-servidor/admin/ o http://tu-dominio.com/admin/
+# Login con el superusuario creado
+# Verificar que se cargaron: Device Families, Brokers, Topics, etc.
+
+
+================================================================================
+12. DESPLIEGUE DE APACHE AIRFLOW (OPCIONAL)
+================================================================================
+
+Apache Airflow se utiliza para orquestar tareas programadas como:
+- Monitoreo de datos de AEMET
+- Sistema de alertas automáticas
+- Limpieza de datos antiguos
+
+NOTA: Airflow es OPCIONAL. Solo desplegarlo si necesitas tareas programadas.
+
+# Puertos adicionales necesarios para Airflow:
+# - 8080: Interfaz web de Airflow
+# - 5433: PostgreSQL de Airflow
+
+# PREREQUISITO: Servicios principales deben estar corriendo (sección 5)
+
+# Agregar swap si el servidor tiene poca RAM (necesario para construir)
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+
+# Iniciar Airflow (combina ambos archivos docker-compose)
+cd /opt/boreas_rgiot
+docker-compose -f docker-compose.yml -f docker-compose.airflow.yml up -d --build
+
+# Verificar estado (deben aparecer 3 contenedores de Airflow)
+docker-compose -f docker-compose.airflow.yml ps
+
+# Ver logs si hay problemas
+docker-compose -f docker-compose.airflow.yml logs -f
+
+# Acceder a Airflow
+# URL: http://IP-servidor:8080 o http://dominio:8080
+# Usuario: airflow / Contraseña: airflow
+
+# Los DAGs se cargan automáticamente desde ./airflow/dags/
+# DAGs disponibles: aemet_data_monitor, boreas_alerts
+
+# Activar DAGs en la interfaz web (toggle switch en cada DAG)
+
+# Comandos útiles:
+docker-compose -f docker-compose.airflow.yml exec airflow-webserver airflow dags list
+docker-compose -f docker-compose.airflow.yml restart airflow-scheduler
+docker-compose -f docker-compose.airflow.yml down  # Detener
+
+
+================================================================================
+13. COMANDOS ÚTILES
+================================================================================
+
+# Ver logs en tiempo real de todos los servicios
+docker-compose logs -f
+
+# Ver logs de un servicio específico
+docker-compose logs -f web
+docker-compose logs -f nginx
+docker-compose logs -f db
+
+# Ejecutar comandos de Django
+docker-compose exec web python manage.py <comando>
+
+# Ejemplos:
+docker-compose exec web python manage.py check
+docker-compose exec web python manage.py makemigrations
+docker-compose exec web python manage.py migrate
+docker-compose exec web python manage.py shell
+
+# Acceder al shell del contenedor
+docker-compose exec web bash
+docker-compose exec db bash
+
+# Conectar a PostgreSQL
+docker-compose exec db psql -U boreas_user -d boreas_db
+
+# Ver uso de recursos
+docker stats
+
+# Limpiar volúmenes (¡CUIDADO! Borra datos)
+docker-compose down -v
+
+# Backup de la base de datos
+docker-compose exec db pg_dump -U boreas_user boreas_db > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Restaurar backup
+docker-compose exec -T db psql -U boreas_user -d boreas_db < backup_20250112_120000.sql
+
+# Actualizar código sin reconstruir
+docker-compose down
+git pull  # si usas git
+docker-compose up -d
+
+# Reiniciar todo el sistema
+docker-compose down
+docker-compose up -d --build --force-recreate
+
+
+================================================================================
+14. SOLUCIÓN DE PROBLEMAS
+================================================================================
+
+PROBLEMA: Error "unknown shorthand flag: 'f' in -f"
+----------------------------------------------------
+Causa: Versión incorrecta de Docker Compose
+
+Solución:
+# Verificar qué versión tienes:
+docker compose version     # Docker Compose v2
+docker-compose --version   # Docker Compose v1
+
+# Si solo funciona docker-compose (v1), OPCIÓN A: Instalar v2
+sudo apt update
+sudo apt install docker-compose-plugin -y
+
+# OPCIÓN B: Usar docker-compose en lugar de docker compose
+# Reemplazar en TODOS los comandos:
+docker compose  →  docker-compose
+
+# Ejemplos:
+docker-compose up -d
+docker-compose -f docker-compose.airflow.yml up -d
+docker-compose ps
+docker-compose logs -f
+
+# OPCIÓN C: Crear alias temporal
+alias docker-compose="docker compose"
+
+# O permanente:
+echo 'alias docker="docker"' >> ~/.bashrc
+source ~/.bashrc
+
+
+PROBLEMA: Los contenedores no inician
+--------------------------------------
+Solución:
+- Verificar logs: docker-compose logs
+- Verificar puertos disponibles: netstat -tulpn | grep -E '80|8000|5432'
+- Verificar archivo .env está configurado correctamente
+
+
+PROBLEMA: Error de conexión a la base de datos
+-----------------------------------------------
+Solución:
+- Verificar que el contenedor db esté corriendo: docker-compose ps
+- Verificar credenciales en .env
+- Esperar a que PostgreSQL esté listo: docker-compose exec db pg_isready
+
+
+PROBLEMA: Los archivos estáticos no se cargan (404)
+----------------------------------------------------
+Solución:
+- Ejecutar collectstatic: docker-compose exec web python manage.py collectstatic
+- Reiniciar nginx: docker-compose restart nginx
+- Verificar permisos de volúmenes: docker-compose exec web ls -la /app/staticfiles
+
+
+PROBLEMA: Cambios en el código no se reflejan
+----------------------------------------------
+Solución:
+- Reconstruir la imagen: docker-compose up -d --build
+- Limpiar caché: docker-compose build --no-cache
+
+
+PROBLEMA: Error 502 Bad Gateway
+--------------------------------
+Solución:
+- Verificar que el servicio web esté corriendo: docker-compose ps
+- Ver logs de web: docker-compose logs web
+- Verificar configuración de nginx
+
+
+PROBLEMA: Permisos denegados
+-----------------------------
+Solución:
+- Verificar propiedad de archivos: sudo chown -R $USER:$USER /opt/boreas_rgiot
+- Verificar permisos de volúmenes Docker
+
+
+================================================================================
+CONFIGURACIÓN DE SSL/HTTPS (OPCIONAL CON CERTBOT)
+================================================================================
+
+# Instalar certbot
+sudo apt install certbot python3-certbot-nginx -y
+
+# Modificar nginx.conf para incluir tu dominio real
+# Luego obtener certificado
+sudo certbot --nginx -d tu-dominio.com -d www.tu-dominio.com
+
+# Reiniciar nginx
+docker-compose restart nginx
+
+# Renovación automática ya está configurada por certbot
+
+
+================================================================================
+CONFIGURACIÓN DE FIREWALL (OPCIONAL)
+================================================================================
+
+# Permitir puertos necesarios
+sudo ufw allow 22/tcp   # SSH
+sudo ufw allow 80/tcp   # HTTP
+sudo ufw allow 443/tcp  # HTTPS
+sudo ufw enable
+
+
+================================================================================
+MONITOREO Y MANTENIMIENTO
+================================================================================
+
+# Configurar reinicio automático tras reinicio del servidor
+docker update --restart=unless-stopped boreas_app
+docker update --restart=unless-stopped boreas_db
+docker update --restart=unless-stopped boreas_nginx
+
+# O en docker-compose.yml ya está configurado: restart: unless-stopped
+
+# Script para backup automático (cron)
+# Crear archivo /opt/boreas_rgiot/backup.sh:
+#!/bin/bash
+cd /opt/boreas_rgiot
+docker-compose exec -T db pg_dump -U boreas_user boreas_db > backups/backup_$(date +\%Y\%m\%d_\%H\%M\%S).sql
+find backups/ -name "backup_*.sql" -mtime +7 -delete
+
+# Hacer ejecutable
+chmod +x /opt/boreas_rgiot/backup.sh
+
+# Agregar a crontab (backup diario a las 2 AM)
+crontab -e
+# Agregar línea:
+0 2 * * * /opt/boreas_rgiot/backup.sh
+
+
+================================================================================
+PROBLEMAS ESPECÍFICOS DE AIRFLOW
+================================================================================
+
+PROBLEMA: Error "KeyError: 'ContainerConfig'" al iniciar contenedores
+----------------------------------------------------------------------
+Causa: Contenedores existentes en estado inconsistente (común en Docker Compose v1)
+
+Solución:
+# PASO 1: Detener y eliminar TODOS los contenedores relacionados
+docker-compose down
+docker-compose -f docker-compose.airflow.yml down
+
+# PASO 2: Eliminar contenedores huérfanos
+docker ps -a | grep boreas | awk '{print $1}' | xargs docker rm -f
+
+# PASO 3: Limpiar sistema Docker (opcional pero recomendado)
+docker system prune -f
+
+# PASO 4: Reiniciar servicios principales PRIMERO
+docker-compose up -d
+
+# PASO 5: Esperar a que estén corriendo
+docker-compose ps
+
+# PASO 6: Luego iniciar Airflow
+docker-compose -f docker-compose.airflow.yml up -d --build
+
+# Si persiste el error, eliminar también imágenes:
+docker-compose down --rmi local
+docker-compose -f docker-compose.airflow.yml down --rmi local
+docker system prune -af
+# Luego reconstruir desde cero
+
+
+PROBLEMA: Error "Killed" al construir imagen de Airflow (código 137)
+---------------------------------------------------------------------
+Causa: Falta de memoria RAM durante la instalación de dependencias
+
+Solución:
+# OPCIÓN A: Aumentar memoria disponible
+# - En servidor físico: verificar RAM disponible con 'free -h'
+# - Cerrar procesos innecesarios: sudo systemctl stop <servicio>
+# - Agregar swap si es necesario:
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+# Hacer permanente el swap:
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+
+# OPCIÓN B: Construir con menos paralelismo (usa menos RAM)
+# Editar Dockerfile.airflow y cambiar:
+RUN pip install --no-cache-dir -r /opt/airflow/airflow-requirements.txt --no-parallel
+RUN pip install --no-cache-dir -r /opt/airflow/requirements.txt --no-parallel
+
+# Luego reconstruir:
+docker-compose -f docker-compose.airflow.yml build --no-cache
+
+# OPCIÓN C: Usar imagen pre-construida de Airflow (RECOMENDADO para servidores con poca RAM)
+# Editar docker-compose.airflow.yml y cambiar:
+# De:
+#   airflow-webserver:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile.airflow
+# A:
+#   airflow-webserver:
+#     image: apache/airflow:2.7.3-python3.11
+#     command: bash -c "pip install django psycopg2-binary && airflow db init && ..."
+
+# OPCIÓN D: Construir en máquina local y transferir imagen
+# En tu máquina local (con más RAM):
+docker-compose -f docker-compose.airflow.yml build
+docker save -o airflow-image.tar boreas_rgiot-airflow-webserver
+scp airflow-image.tar usuario@servidor:/tmp/
+
+# En el servidor remoto:
+docker load -i /tmp/airflow-image.tar
+
+# OPCIÓN E: Si nada funciona, no usar Airflow
+# Comentar las tareas de Airflow en el deploy y ejecutarlas manualmente con cron
+
+
+PROBLEMA: Error "Service 'airflow-webserver' depends on service 'db' which is undefined"
+------------------------------------------------------------------------------------
+Causa: Airflow depende del servicio 'db' definido en docker-compose.yml
+
+Solución:
+# OPCIÓN A: Iniciar ambos archivos docker-compose juntos
+docker-compose -f docker-compose.yml -f docker-compose.airflow.yml up -d
+
+# OPCIÓN B: Asegurarse de que los servicios principales están corriendo primero
+docker-compose up -d
+# Luego iniciar Airflow
+docker-compose -f docker-compose.airflow.yml up -d
+
+# OPCIÓN C: Verificar que el servicio 'db' está corriendo
+docker-compose ps | grep db
+docker-compose -f docker-compose.airflow.yml logs -f
+
+
+PROBLEMA: No se pueden ejecutar tareas que usan Django
+-------------------------------------------------------
+Solución:
+- Verificar que DATABASE_URL está en .env
+- Verificar que el contenedor 'db' está corriendo y healthy
+- Comprobar conectividad: docker-compose -f docker-compose.airflow.yml restart airflow-scheduler
+
+
+PROBLEMA: DAGs aparecen pero con errores
+-----------------------------------------
+Solución:
+- Revisar logs del DAG en la interfaz web (Graph > Log)
+- Verificar que las dependencias de Python están instaladas
+- Comprobar que las rutas a Django son correctas (/app)
+- Ver logs: docker-compose -f docker-compose.airflow.yml logs -f
+- Verificar que DATABASE_URL está en .env
+- Verificar que el contenedor 'db' está corriendo y healthy
+- Comprobar conectividad: docker-compose -f docker-compose.airflow.yml exec airflow-webserver python -c "import django; django.setup()"
+
+
+PROBLEMA: Airflow no envía emails
+----------------------------------
+Solución:
+- Configurar SMTP en variables de entorno de Airflow
+- Agregar en docker-compose.airflow.yml:
+  AIRFLOW__SMTP__SMTP_HOST=mail.tudominio.com
+  AIRFLOW__SMTP__SMTP_PORT=587
+  AIRFLOW__SMTP__SMTP_USER=usuario@dominio.com
+  AIRFLOW__SMTP__SMTP_PASSWORD=contraseña
+  AIRFLOW__SMTP__SMTP_MAIL_FROM=noreply@dominio.com
+
+
+================================================================================
+CONTACTO Y SOPORTE
+================================================================================
+
+Para soporte adicional, contactar con el equipo de desarrollo.
+Email: alonsogpablo@rggestionyenergia.com
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================
