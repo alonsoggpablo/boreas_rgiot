@@ -1,12 +1,14 @@
 import json
 import re
 import ssl
+import logging
 import paho.mqtt.client as mqtt
 import django
 import os
 
 import pytz
 
+logger = logging.getLogger(__name__)
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "boreas_mediacion.settings")
 from django.conf import settings
@@ -444,7 +446,7 @@ def mqtt_publish(mqtt_client):
 def on_connect(mqtt_client, userdata, flags, rc):
 
     if rc == 0:
-        print('Connected successfully')
+        logger.info('MQTT connected successfully')
         mqtt_client.subscribe(get_topics_list())
 
 
@@ -452,11 +454,11 @@ def on_connect(mqtt_client, userdata, flags, rc):
 
 
     else:
-        print('Bad connection. Code:', rc)
+        logger.error('MQTT bad connection. Code: %s', rc)
 def on_message(mqtt_client, userdata, msg):
     topic=msg.topic
     payload = str(msg.payload.decode("utf-8", "ignore"))
-    print(f'Received message on topic: {msg.topic} with payload: {msg.payload}')
+    logger.debug(f'Received message on topic: {msg.topic} with payload: {msg.payload}')
     
     # First, check if payload has reported_measure structure
     # Supports: device_info + measures, device + measures, or AEMET format (idema)
@@ -501,7 +503,7 @@ def on_message(mqtt_client, userdata, msg):
 
 def on_publish(client,userdata,result):
     #create function for callback
-    print("data published \n")
+    logger.debug("data published")
     print (result)
     print (userdata)
     pass
@@ -535,8 +537,8 @@ try:
         keepalive=MQTT_KEEPALIVE
     )
 except Exception as e:
-    print(f"Warning: Could not initialize MQTT broker - {str(e)}")
-    print("MQTT client will not be available until tables are created and populated")
+    logger.warning(f"Could not initialize MQTT broker - {str(e)}")
+    logger.warning("MQTT client will not be available until tables are created and populated")
     client = None
 
 # MQTT Control Functions
@@ -552,10 +554,10 @@ def start_mqtt_client():
     try:
         client.loop_start()
         mqtt_client_running = True
-        print(f"MQTT client started successfully. Running: {mqtt_client_running}")
+        logger.info(f"MQTT client started successfully. Running: {mqtt_client_running}")
         return {"status": "success", "message": "MQTT client started successfully"}
     except Exception as e:
-        print(f"Error starting MQTT client: {str(e)}")
+        logger.error(f"Error starting MQTT client: {str(e)}")
         return {"status": "error", "message": f"Error starting MQTT: {str(e)}"}
 
 def stop_mqtt_client():
@@ -568,10 +570,10 @@ def stop_mqtt_client():
     try:
         client.loop_stop()
         mqtt_client_running = False
-        print(f"MQTT client stopped successfully. Running: {mqtt_client_running}")
+        logger.info(f"MQTT client stopped successfully. Running: {mqtt_client_running}")
         return {"status": "success", "message": "MQTT client stopped successfully"}
     except Exception as e:
-        print(f"Error stopping MQTT client: {str(e)}")
+        logger.error(f"Error stopping MQTT client: {str(e)}")
         return {"status": "error", "message": f"Error stopping MQTT: {str(e)}"}
 
 def get_mqtt_status():
