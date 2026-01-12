@@ -122,23 +122,25 @@ echo ""
 
 # 10. Cargar fixtures
 echo -e "${YELLOW}10. Cargando datos iniciales (fixtures)...${NC}"
-if docker-compose exec -T web bash -lc "ls -1 /app/fixtures/*.json" >/dev/null 2>&1; then
-    docker-compose exec -T web bash -lc "python manage.py loaddata /app/fixtures/*.json"
+FIXTURES_SRC="$(pwd)/boreas_mediacion/fixtures"
+FIXTURES_DST="/app/boreas_mediacion/fixtures"
+
+if docker-compose exec -T web bash -lc "ls -1 ${FIXTURES_DST}/*.json" >/dev/null 2>&1; then
+    docker-compose exec -T web bash -lc "python manage.py loaddata ${FIXTURES_DST}/*.json"
     echo -e "${GREEN}✓ Fixtures cargados${NC}"
 else
-    echo -e "${YELLOW}No se encontraron fixtures en /app/fixtures/*.json. Intentando copiar desde host...${NC}"
-    if [ -d "$(pwd)/boreas_mediacion/fixtures" ]; then
-        # Crear carpeta destino dentro del contenedor y copiar
-        docker-compose exec -T web mkdir -p /app/fixtures
-        docker cp "$(pwd)/boreas_mediacion/fixtures/." boreas_app:/app/fixtures/ 2>/dev/null || true
+    echo -e "${YELLOW}No se encontraron fixtures en ${FIXTURES_DST}/*.json. Intentando copiar desde host...${NC}"
+    if [ -d "${FIXTURES_SRC}" ]; then
+        docker-compose exec -T web mkdir -p "${FIXTURES_DST}"
+        docker cp "${FIXTURES_SRC}/." boreas_app:"${FIXTURES_DST}/" 2>/dev/null || true
     fi
 
     # Reintentar carga
-    if docker-compose exec -T web bash -lc "ls -1 /app/fixtures/*.json" >/dev/null 2>&1; then
-        docker-compose exec -T web bash -lc "python manage.py loaddata /app/fixtures/*.json"
+    if docker-compose exec -T web bash -lc "ls -1 ${FIXTURES_DST}/*.json" >/dev/null 2>&1; then
+        docker-compose exec -T web bash -lc "python manage.py loaddata ${FIXTURES_DST}/*.json"
         echo -e "${GREEN}✓ Fixtures copiados y cargados${NC}"
     else
-        echo -e "${RED}✗ No se encontraron fixtures en /app/fixtures/*.json tras el copiado${NC}"
+        echo -e "${RED}✗ No se encontraron fixtures en ${FIXTURES_DST}/*.json tras el copiado${NC}"
         echo "   Ejecuta en el servidor: docker-compose build --no-cache"
         echo "   Luego vuelve a correr este script."
         exit 1
