@@ -122,8 +122,15 @@ echo ""
 
 # 10. Cargar fixtures
 echo -e "${YELLOW}10. Cargando datos iniciales (fixtures)...${NC}"
-docker-compose exec -T web bash -c "python manage.py loaddata fixtures/*.json"
-echo -e "${GREEN}✓ Fixtures cargados${NC}"
+if docker-compose exec -T web bash -lc "ls -1 /app/fixtures/*.json" >/dev/null 2>&1; then
+    docker-compose exec -T web bash -lc "python manage.py loaddata /app/fixtures/*.json"
+    echo -e "${GREEN}✓ Fixtures cargados${NC}"
+else
+    echo -e "${RED}✗ No se encontraron fixtures en /app/fixtures/*.json${NC}"
+    echo "   Si estás en el servidor, ejecuta 'docker-compose build --no-cache' para asegurar que las fixtures se copien en la imagen."
+    echo "   Luego vuelve a correr este script."
+    exit 1
+fi
 echo ""
 
 # 11. Recopilar archivos estáticos
