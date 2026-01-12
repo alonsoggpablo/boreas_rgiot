@@ -163,10 +163,10 @@ echo ""
 echo -e "${YELLOW}13. Verificando logs (últimas 20 líneas)...${NC}"
 echo ""
 echo "Logs de web:"
-docker-compose logs web --tail=20
+docker-compose logs --tail=20 web
 echo ""
 echo "Logs de nginx:"
-docker-compose logs nginx --tail=20
+docker-compose logs --tail=20 nginx
 echo ""
 
 # 14. Prueba HTTP
