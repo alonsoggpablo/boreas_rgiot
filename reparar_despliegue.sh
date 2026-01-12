@@ -126,10 +126,22 @@ if docker-compose exec -T web bash -lc "ls -1 /app/fixtures/*.json" >/dev/null 2
     docker-compose exec -T web bash -lc "python manage.py loaddata /app/fixtures/*.json"
     echo -e "${GREEN}✓ Fixtures cargados${NC}"
 else
-    echo -e "${RED}✗ No se encontraron fixtures en /app/fixtures/*.json${NC}"
-    echo "   Si estás en el servidor, ejecuta 'docker-compose build --no-cache' para asegurar que las fixtures se copien en la imagen."
-    echo "   Luego vuelve a correr este script."
-    exit 1
+    echo -e "${YELLOW}No se encontraron fixtures en /app/fixtures/*.json. Intentando copiar desde host...${NC}"
+    # Copiar fixtures desde el host al contenedor (contener nombre boreas_app en docker-compose.yml)
+    if [ -d "$(pwd)/boreas_mediacion/fixtures" ]; then
+        docker cp "$(pwd)/boreas_mediacion/fixtures/." boreas_app:/app/fixtures/ 2>/dev/null || true
+    fi
+
+    # Reintentar carga
+    if docker-compose exec -T web bash -lc "ls -1 /app/fixtures/*.json" >/dev/null 2>&1; then
+        docker-compose exec -T web bash -lc "python manage.py loaddata /app/fixtures/*.json"
+        echo -e "${GREEN}✓ Fixtures copiados y cargados${NC}"
+    else
+        echo -e "${RED}✗ No se encontraron fixtures en /app/fixtures/*.json tras el copiado${NC}"
+        echo "   Ejecuta en el servidor: docker-compose build --no-cache"
+        echo "   Luego vuelve a correr este script."
+        exit 1
+    fi
 fi
 echo ""
 
