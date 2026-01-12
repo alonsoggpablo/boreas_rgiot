@@ -42,7 +42,7 @@ LOGGING = {
         },
         'boreas_mediacion': {
             'handlers': ['console'],
-            'level': 'INFO',
+            'level': 'WARNING',  # Suppress debug/info messages like "Reported measure updated"
             'propagate': False,
         },
     },
