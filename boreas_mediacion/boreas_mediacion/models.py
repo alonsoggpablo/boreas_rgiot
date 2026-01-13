@@ -5,7 +5,7 @@ from django.db import models
 
 
 class MQTT_device_family(models.Model):
-    name=models.CharField(max_length=100)
+    name=models.CharField(max_length=100, default='unknown')
     def __str__(self):
         return self.name
 
@@ -37,46 +37,46 @@ class reported_measure(models.Model):
         return f"{self.feed}:{self.device_id}"
 
 class MQTT_broker(models.Model):
-    name=models.CharField(max_length=100)
-    server=models.CharField(max_length=100)
+    name=models.CharField(max_length=100, default='unknown')
+    server=models.CharField(max_length=100, default='localhost')
     port=models.IntegerField(default=1883)
     keepalive=models.IntegerField(default=60)
-    description=models.CharField(max_length=100)
+    description=models.CharField(max_length=100, default='', blank=True, null=True)
     active=models.BooleanField(default=True)
-    user = models.CharField(max_length=100)
-    password = models.CharField(max_length=100)
+    user = models.CharField(max_length=100, default='', blank=True, null=True)
+    password = models.CharField(max_length=100, default='', blank=True, null=True)
     def __str__(self):
         return self.name
 
 class MQTT_topic(models.Model):
     broker=models.ForeignKey(MQTT_broker,on_delete=models.CASCADE)
     family=models.ForeignKey(MQTT_device_family,on_delete=models.CASCADE)
-    topic=models.CharField(max_length=100)
+    topic=models.CharField(max_length=100, default='unknown')
     qos=models.IntegerField(default=0)
-    description=models.CharField(max_length=100)
+    description=models.CharField(max_length=100, default='', blank=True, null=True)
     active=models.BooleanField(default=False)
     ro_rw=models.CharField(max_length=2,default='ro')
     def __str__(self):
         return self.topic
 
 class MQTT_tx(models.Model):
-    topic=models.CharField(max_length=100)
-    payload=models.CharField(max_length=1000)
+    topic=models.CharField(max_length=100, default='unknown')
+    payload=models.CharField(max_length=1000, default='', blank=True, null=True)
 
     def __str__(self):
         return self.topic.topic
 class MQTT_feed(models.Model):
-    name=models.CharField(max_length=100)
-    description=models.CharField(max_length=100)
+    name=models.CharField(max_length=100, default='unknown')
+    description=models.CharField(max_length=100, default='', blank=True, null=True)
     topic=models.ForeignKey(MQTT_topic,on_delete=models.CASCADE)
     def __str__(self):
         return self.name
 
 class sensor_actuacion(models.Model):
-    tipo=models.CharField(max_length=100)
-    command=models.CharField(max_length=100)
-    parameter=models.CharField(max_length=100)
-    description=models.CharField(max_length=100)
+    tipo=models.CharField(max_length=100, default='unknown')
+    command=models.CharField(max_length=100, default='', blank=True, null=True)
+    parameter=models.CharField(max_length=100, default='', blank=True, null=True)
+    description=models.CharField(max_length=100, default='', blank=True, null=True)
     def __str__(self):
         return self.tipo
 class sensor_command(models.Model):
@@ -88,8 +88,8 @@ class sensor_command(models.Model):
         return self.actuacion.description
 
 class router_parameter(models.Model):
-    parameter=models.CharField(max_length=100)
-    description=models.CharField(max_length=100)
+    parameter=models.CharField(max_length=100, default='unknown')
+    description=models.CharField(max_length=100, default='', blank=True, null=True)
     def __str__(self):
         return self.parameter
 class router_get(models.Model):
@@ -103,21 +103,21 @@ class router_get(models.Model):
 class WirelessLogic_SIM(models.Model):
     """Modelo para almacenar información de tarjetas SIM de WirelessLogic"""
     # Identificadores principales
-    iccid = models.CharField(max_length=20, unique=True, db_index=True, help_text="Integrated Circuit Card Identifier")
-    msisdn = models.CharField(max_length=20, blank=True, null=True, help_text="Mobile Station International Subscriber Directory Number")
-    imsi = models.CharField(max_length=20, blank=True, null=True, help_text="International Mobile Subscriber Identity")
+    iccid = models.CharField(max_length=20, unique=True, db_index=True, help_text="Integrated Circuit Card Identifier", default='')
+    msisdn = models.CharField(max_length=20, blank=True, null=True, help_text="Mobile Station International Subscriber Directory Number", default='')
+    imsi = models.CharField(max_length=20, blank=True, null=True, help_text="International Mobile Subscriber Identity", default='')
     
     # Información de estado
-    status = models.CharField(max_length=50, blank=True, null=True, help_text="Estado actual de la SIM")
+    status = models.CharField(max_length=50, blank=True, null=True, help_text="Estado actual de la SIM", default='')
     activation_date = models.DateTimeField(blank=True, null=True, help_text="Fecha de activación")
     
     # Información de tarifa y cuenta
-    tariff_name = models.CharField(max_length=200, blank=True, null=True)
-    account_name = models.CharField(max_length=200, blank=True, null=True)
+    tariff_name = models.CharField(max_length=200, blank=True, null=True, default='')
+    account_name = models.CharField(max_length=200, blank=True, null=True, default='')
     
     # Información de red
-    network = models.CharField(max_length=100, blank=True, null=True)
-    roaming_network = models.CharField(max_length=100, blank=True, null=True)
+    network = models.CharField(max_length=100, blank=True, null=True, default='')
+    roaming_network = models.CharField(max_length=100, blank=True, null=True, default='')
     
     # Datos completos en JSON (para campos adicionales)
     raw_data = models.JSONField(default=dict, help_text="Datos completos de la API")
@@ -174,8 +174,8 @@ class WirelessLogic_Usage(models.Model):
 # Sigfox sensor models
 class SigfoxDevice(models.Model):
     """Dispositivo Sigfox (sensor)"""
-    device_id = models.CharField(max_length=50, unique=True, db_index=True)
-    firmware = models.CharField(max_length=10, blank=True, null=True)
+    device_id = models.CharField(max_length=50, unique=True, db_index=True, default='')
+    firmware = models.CharField(max_length=10, blank=True, null=True, default='')
     last_seen = models.DateTimeField(blank=True, null=True)
     last_payload = models.JSONField(default=dict, blank=True)
 
@@ -201,7 +201,7 @@ class SigfoxReading(models.Model):
     """Lecturas individuales de sensores Sigfox"""
     device = models.ForeignKey(SigfoxDevice, on_delete=models.CASCADE, related_name='readings')
     timestamp = models.DateTimeField()
-    firmware = models.CharField(max_length=10, blank=True, null=True)
+    firmware = models.CharField(max_length=10, blank=True, null=True, default='')
 
     co2 = models.IntegerField(blank=True, null=True)
     temp = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
@@ -225,11 +225,11 @@ class SigfoxReading(models.Model):
 # DATADIS models for Spanish electricity consumption data
 class DatadisCredentials(models.Model):
     """Credenciales para acceso a la API de DATADIS"""
-    username = models.CharField(max_length=100, unique=True, help_text="NIF/CIF del usuario")
-    password = models.CharField(max_length=200, help_text="Contraseña de acceso")
+    username = models.CharField(max_length=100, unique=True, help_text="NIF/CIF del usuario", default='')
+    password = models.CharField(max_length=200, help_text="Contraseña de acceso", default='')
     
     # Token de autenticación
-    auth_token = models.TextField(blank=True, null=True, help_text="Token Bearer de autenticación")
+    auth_token = models.TextField(blank=True, null=True, help_text="Token Bearer de autenticación", default='')
     token_expires_at = models.DateTimeField(blank=True, null=True)
     
     # Estado
@@ -253,17 +253,17 @@ class DatadisSupply(models.Model):
     credentials = models.ForeignKey(DatadisCredentials, on_delete=models.CASCADE, related_name='supplies')
     
     # Identificadores
-    cups = models.CharField(max_length=22, unique=True, db_index=True, help_text="Código Universal de Punto de Suministro")
+    cups = models.CharField(max_length=22, unique=True, db_index=True, help_text="Código Universal de Punto de Suministro", default='')
     
     # Ubicación
-    address = models.CharField(max_length=500, blank=True, null=True)
-    postal_code = models.CharField(max_length=10, blank=True, null=True)
-    province = models.CharField(max_length=100, blank=True, null=True)
-    municipality = models.CharField(max_length=200, blank=True, null=True)
+    address = models.CharField(max_length=500, blank=True, null=True, default='')
+    postal_code = models.CharField(max_length=10, blank=True, null=True, default='')
+    province = models.CharField(max_length=100, blank=True, null=True, default='')
+    municipality = models.CharField(max_length=200, blank=True, null=True, default='')
     
     # Detalles técnicos
-    distributor = models.CharField(max_length=100, blank=True, null=True)
-    distributor_code = models.CharField(max_length=10, blank=True, null=True)
+    distributor = models.CharField(max_length=100, blank=True, null=True, default='')
+    distributor_code = models.CharField(max_length=10, blank=True, null=True, default='')
     point_type = models.IntegerField(blank=True, null=True, help_text="Tipo de punto: 1-5")
     
     # Fechas de validez
@@ -294,7 +294,7 @@ class DatadisConsumption(models.Model):
     
     # Período
     date = models.DateField(db_index=True)
-    time = models.CharField(max_length=10, blank=True, null=True, help_text="Hora en formato HH:MM")
+    time = models.CharField(max_length=10, blank=True, null=True, help_text="Hora en formato HH:MM", default='')
     
     # Datos de consumo
     consumption_kwh = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True, help_text="Consumo en kWh")
@@ -325,7 +325,7 @@ class DatadisMaxPower(models.Model):
     
     # Período
     date = models.DateField(db_index=True)
-    time = models.CharField(max_length=10, blank=True, null=True)
+    time = models.CharField(max_length=10, blank=True, null=True, default='')
     
     # Datos de potencia
     max_power_kw = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True, help_text="Potencia máxima en kW")
@@ -362,9 +362,9 @@ class AlertRule(models.Model):
         ('mqtt', 'MQTT'),
     ]
     
-    name = models.CharField(max_length=200, help_text="Nombre de la regla de alerta")
-    rule_type = models.CharField(max_length=50, choices=RULE_TYPES, db_index=True)
-    description = models.TextField(blank=True, null=True)
+    name = models.CharField(max_length=200, help_text="Nombre de la regla de alerta", default='')
+    rule_type = models.CharField(max_length=50, choices=RULE_TYPES, db_index=True, default='custom')
+    description = models.TextField(blank=True, null=True, default='')
     
     # Configuración de la regla
     threshold = models.IntegerField(blank=True, null=True, help_text="Umbral para activar alerta (ej: 89 para 89% disco)")
@@ -375,8 +375,8 @@ class AlertRule(models.Model):
     
     # Notificaciones
     notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='email')
-    notification_recipients = models.TextField(help_text="Destinatarios separados por comas")
-    notification_subject = models.CharField(max_length=500, blank=True, null=True)
+    notification_recipients = models.TextField(help_text="Destinatarios separados por comas", default='')
+    notification_subject = models.CharField(max_length=500, blank=True, null=True, default='')
     
     # Estado
     active = models.BooleanField(default=True)
@@ -419,7 +419,7 @@ class Alert(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', db_index=True)
     
     # Mensaje y detalles
-    message = models.TextField()
+    message = models.TextField(default='')
     details = models.JSONField(default=dict, help_text="Detalles adicionales de la alerta")
     
     # Timestamps
@@ -448,10 +448,10 @@ class AlertNotification(models.Model):
     alert = models.ForeignKey(Alert, on_delete=models.CASCADE, related_name='notifications')
     
     # Detalles de la notificación
-    notification_type = models.CharField(max_length=200)
-    recipients = models.TextField()
-    subject = models.CharField(max_length=500, blank=True, null=True)
-    message = models.TextField()
+    notification_type = models.CharField(max_length=200, default='')
+    recipients = models.TextField(default='')
+    subject = models.CharField(max_length=500, blank=True, null=True, default='')
+    message = models.TextField(default='')
     
     # Estado
     status = models.CharField(max_length=20, choices=NOTIFICATION_STATUS, default='pending')

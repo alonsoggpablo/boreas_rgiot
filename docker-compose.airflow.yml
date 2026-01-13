@@ -56,65 +56,6 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # Airflow Webserver
-  airflow-webserver:
-    build:
-      context: .
-      dockerfile: Dockerfile.airflow
-    container_name: boreas_airflow_web
-    command: bash -c "airflow db init && airflow users create --username airflow --password airflow --firstname Admin --lastname User --role Admin --email admin@example.com 2>/dev/null || true && airflow webserver"
-    ports:
-      - "8080:8080"
-    env_file:
-      - .env
-    environment:
-      - AIRFLOW_HOME=/opt/airflow
-      - AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags
-      - AIRFLOW__CORE__LOAD_EXAMPLES=False
-      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
-      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - DJANGO_SETTINGS_MODULE=boreas_mediacion.settings
-      - DJANGO_DATABASE_URL=${DATABASE_URL}
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./airflow/logs:/opt/airflow/logs
-      - ./airflow/plugins:/opt/airflow/plugins
-      - ./boreas_mediacion:/app
-    depends_on:
-      airflow-db:
-        condition: service_healthy
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-
-  # Airflow Scheduler
-  airflow-scheduler:
-    build:
-      context: .
-      dockerfile: Dockerfile.airflow
-    container_name: boreas_airflow_scheduler
-    command: bash -c "sleep 10 && airflow scheduler"
-    env_file:
-      - .env
-    environment:
-      - AIRFLOW_HOME=/opt/airflow
-      - AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags
-      - AIRFLOW__CORE__LOAD_EXAMPLES=False
-      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
-      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - DJANGO_SETTINGS_MODULE=boreas_mediacion.settings
-      - DJANGO_DATABASE_URL=${DATABASE_URL}
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./airflow/logs:/opt/airflow/logs
-      - ./airflow/plugins:/opt/airflow/plugins
-      - ./boreas_mediacion:/app
-    depends_on:
-      airflow-db:
-        condition: service_healthy
-      db:
-        condition: service_healthy
-    restart: unless-stopped
 
 volumes:
   # No airflow_postgres_data needed, db volume is defined in main compose file
