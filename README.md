@@ -179,7 +179,291 @@ docker-compose exec web python manage.py loaddata fixtures/05_router_parameters.
    - AEMET Data: Alerta para datos meteorológicos
 3. Configurar destinatarios de email
 
-## 📚 Uso
+## � Sistema de Alertas
+
+El sistema de alertas permite monitorear automáticamente diferentes aspectos del sistema y enviar notificaciones cuando se detectan condiciones anormales.
+
+### Tipos de Alertas
+
+#### 1. Disk Space (Espacio en Disco)
+
+Monitorea el uso del disco y genera alertas cuando supera un umbral.
+
+**Configuración:**
+```python
+Tipo: disk_space
+Umbral: 89 (%)
+Intervalo de verificación: 60 minutos
+Destinatarios: admin@dominio.com, ops@dominio.com
+```
+
+**Ejemplo de uso:**
+1. Acceder a Django Admin → Alert Rules
+2. Crear nueva regla:
+   - Nombre: "Alerta Disco Lleno"
+   - Tipo: Disk Space
+   - Umbral: 85
+   - Intervalo: 30 minutos
+   - Notificación: email
+   - Destinatarios: admin@ejemplo.com
+
+#### 2. Device Connection (Conexión de Dispositivos)
+
+Detecta cuando dispositivos IoT dejan de reportar datos.
+
+**Configuración:**
+```python
+Tipo: device_connection
+Configuración JSON: {
+  "device_id": "shellyem3-BCFF4DFD1732",
+  "max_silence_minutes": 60
+}
+Destinatarios: iot@dominio.com
+```
+
+#### 3. AEMET Data (Datos Meteorológicos)
+
+Verifica que los datos de AEMET se reciben correctamente.
+
+**Configuración:**
+```python
+Tipo: aemet_data
+Configuración JSON: {
+  "station_id": "5514X",
+  "max_age_hours": 3
+}
+```
+
+### Estados de Alertas
+
+- **active**: Alerta activa que requiere atención
+- **acknowledged**: Alerta reconocida por un operador
+- **resolved**: Problema resuelto, alerta cerrada
+
+### Niveles de Severidad
+
+- **info**: Información general
+- **warning**: Advertencia, requiere revisión
+- **error**: Error que afecta funcionalidad
+- **critical**: Crítico, requiere atención inmediata
+
+### Gestión de Alertas vía API
+
+```bash
+# Listar alertas activas
+curl http://localhost/api/alerts/?status=active
+
+# Reconocer una alerta
+curl -X PATCH http://localhost/api/alerts/1/ \
+  -H "Content-Type: application/json" \
+  -d '{"status": "acknowledged"}'
+
+# Resolver una alerta
+curl -X PATCH http://localhost/api/alerts/1/ \
+  -H "Content-Type: application/json" \
+  -d '{"status": "resolved"}'
+
+# Crear alerta personalizada
+curl -X POST http://localhost/api/alerts/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "alert_type": "custom",
+    "severity": "warning",
+    "message": "Temperatura alta en sala de servidores",
+    "details": {
+      "temperature": 35,
+      "location": "Server Room A",
+      "sensor_id": "temp-001"
+    }
+  }'
+```
+
+### Notificaciones
+
+El sistema soporta dos tipos de notificaciones:
+
+1. **Email**: Envío de correos mediante SMTP
+2. **MQTT**: Publicación de mensajes en topics MQTT
+
+**Configuración de notificaciones por email:**
+- Configurar variables de entorno: `EMAIL_HOST`, `EMAIL_PORT`, etc.
+- Especificar destinatarios en la regla de alerta (separados por comas)
+
+**Configuración de notificaciones por MQTT:**
+```python
+Tipo de notificación: mqtt
+Configuración JSON: {
+  "topic": "alerts/critical",
+  "qos": 1
+}
+```
+
+## ⏰ Apache Airflow - DAGs
+
+Apache Airflow gestiona la ejecución programada de tareas de recolección y procesamiento de datos.
+
+### DAGs Disponibles
+
+#### 1. aemet_data_monitor
+
+Monitorea y recopila datos meteorológicos de AEMET.
+
+**Descripción:**
+- **Frecuencia**: Cada 3 horas
+- **Función**: Consulta API de AEMET y almacena datos meteorológicos
+- **Estaciones monitoreadas**: Configurables en el código
+
+**Tareas del DAG:**
+1. `check_api_status`: Verifica disponibilidad de API AEMET
+2. `fetch_weather_data`: Descarga datos meteorológicos
+3. `store_data`: Almacena en base de datos
+4. `check_alerts`: Verifica condiciones de alerta
+
+**Configuración:**
+```python
+# Ubicación: airflow/dags/aemet_monitor.py
+default_args = {
+    'depends_on_past': False,
+    'email_on_failure': True,
+    'email_on_retry': False,
+    'retries': 3,
+    'retry_delay': timedelta(minutes=5),
+}
+
+schedule_interval = '0 */3 * * *'  # Cada 3 horas
+```
+
+**Activar DAG:**
+1. Acceder a Airflow UI: http://localhost:8080
+2. Buscar "aemet_data_monitor"
+3. Activar el toggle
+4. Opcional: ejecutar manualmente con "Trigger DAG"
+
+#### 2. boreas_alerts
+
+Ejecuta verificaciones periódicas de reglas de alerta.
+
+**Descripción:**
+- **Frecuencia**: Cada 15 minutos
+- **Función**: Evalúa todas las reglas de alerta activas y genera notificaciones
+
+**Tareas del DAG:**
+1. `load_alert_rules`: Carga reglas activas de la base de datos
+2. `check_disk_space`: Verifica espacio en disco
+3. `check_device_connections`: Verifica conectividad de dispositivos
+4. `check_aemet_data`: Verifica frescura de datos AEMET
+5. `send_notifications`: Envía notificaciones para alertas nuevas
+
+**Configuración:**
+```python
+# Ubicación: airflow/dags/boreas_alerts.py
+schedule_interval = '*/15 * * * *'  # Cada 15 minutos
+```
+
+**Monitoreo:**
+- Ver ejecuciones en Airflow UI → DAG Runs
+- Logs detallados en cada tarea
+- Métricas de éxito/fallo
+
+### Gestión de DAGs
+
+#### Ver logs de ejecución
+
+```bash
+# Logs del scheduler
+docker-compose logs -f airflow-scheduler
+
+# Logs de una ejecución específica (desde Airflow UI)
+# DAG → DAG Runs → Click en fecha → View Log
+```
+
+#### Ejecutar DAG manualmente
+
+```bash
+# Opción 1: Desde Airflow UI
+# Click en DAG → Trigger DAG → Confirm
+
+# Opción 2: Desde línea de comandos
+docker-compose exec airflow-scheduler airflow dags trigger aemet_data_monitor
+docker-compose exec airflow-scheduler airflow dags trigger boreas_alerts
+```
+
+#### Pausar/Reanudar DAG
+
+```bash
+# Pausar
+docker-compose exec airflow-scheduler airflow dags pause aemet_data_monitor
+
+# Reanudar
+docker-compose exec airflow-scheduler airflow dags unpause aemet_data_monitor
+```
+
+#### Configurar alertas de Airflow
+
+En `airflow/dags/aemet_monitor.py`:
+
+```python
+default_args = {
+    'email': ['admin@ejemplo.com'],
+    'email_on_failure': True,
+    'email_on_retry': False,
+}
+```
+
+### Crear un DAG Personalizado
+
+1. Crear archivo en `airflow/dags/mi_dag_personalizado.py`:
+
+```python
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from datetime import datetime, timedelta
+
+def mi_tarea():
+    print("Ejecutando mi tarea personalizada")
+    # Tu lógica aquí
+
+default_args = {
+    'owner': 'boreas',
+    'depends_on_past': False,
+    'start_date': datetime(2026, 1, 1),
+    'email_on_failure': True,
+    'retries': 1,
+    'retry_delay': timedelta(minutes=5),
+}
+
+dag = DAG(
+    'mi_dag_personalizado',
+    default_args=default_args,
+    description='Mi DAG personalizado',
+    schedule_interval='@daily',  # Diario
+    catchup=False,
+)
+
+tarea = PythonOperator(
+    task_id='ejecutar_tarea',
+    python_callable=mi_tarea,
+    dag=dag,
+)
+```
+
+2. Reiniciar scheduler para detectar nuevo DAG:
+
+```bash
+docker-compose restart airflow-scheduler
+```
+
+3. Verificar en Airflow UI que el DAG aparece
+
+### Mejores Prácticas para DAGs
+
+- **Idempotencia**: Las tareas deben poder ejecutarse múltiples veces sin efectos secundarios
+- **Atomicidad**: Cada tarea debe ser una unidad atómica de trabajo
+- **Logging**: Usar logging adecuado para depuración
+- **Manejo de errores**: Implementar reintentos y manejo de excepciones
+- **Testing**: Probar DAGs antes de desplegar en producción
+
+## �📚 Uso
 
 ### API REST - Endpoints Principales
 
