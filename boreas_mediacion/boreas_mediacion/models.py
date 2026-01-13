@@ -448,7 +448,7 @@ class AlertNotification(models.Model):
     alert = models.ForeignKey(Alert, on_delete=models.CASCADE, related_name='notifications')
     
     # Detalles de la notificación
-    notification_type = models.CharField(max_length=20)
+    notification_type = models.CharField(max_length=200)
     recipients = models.TextField()
     subject = models.CharField(max_length=500, blank=True, null=True)
     message = models.TextField()
