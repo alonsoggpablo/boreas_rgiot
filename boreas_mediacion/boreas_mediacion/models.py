@@ -414,7 +414,7 @@ class Alert(models.Model):
     rule = models.ForeignKey(AlertRule, on_delete=models.CASCADE, related_name='alerts', blank=True, null=True)
     
     # Detalles de la alerta
-    alert_type = models.CharField(max_length=50, db_index=True)
+    alert_type = models.CharField(max_length=50, db_index=True, default='general', blank=True)
     severity = models.CharField(max_length=20, choices=SEVERITY_LEVELS, default='warning')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', db_index=True)
     
