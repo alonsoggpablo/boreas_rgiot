@@ -296,6 +296,201 @@ Usado: {usage_percent}%
         return None
 
 
+class TopicTimeoutAlertService(AlertService):
+    """Service for monitoring MQTT topic message timeouts"""
+    
+    def check_family_timeouts(self, rule: AlertRule) -> Optional[Alert]:
+        """
+        Check if a device family has not received messages within timeout period
+        
+        Args:
+            rule: AlertRule with config containing 'family_name' and 'timeout_minutes'
+            
+        Returns:
+            Alert instance if timeout detected, None otherwise
+        """
+        from .models import MQTT_device_family, mqtt_msg
+        
+        family_name = rule.config.get('family_name')
+        timeout_minutes = rule.config.get('timeout_minutes', 60)
+        
+        if not family_name:
+            print(f"Rule {rule.name} missing family_name in config")
+            return None
+        
+        try:
+            family = MQTT_device_family.objects.get(name=family_name)
+        except MQTT_device_family.DoesNotExist:
+            print(f"Family {family_name} not found")
+            return None
+        
+        # Get last message for this family
+        last_msg = mqtt_msg.objects.filter(device_family=family).order_by('-report_time').first()
+        
+        if not last_msg:
+            # No messages ever received
+            message = f"No data received from family '{family_name}' (never received any messages)"
+            severity = 'critical'
+        else:
+            # Check timeout
+            timeout_threshold = timezone.now() - timedelta(minutes=timeout_minutes)
+            if last_msg.report_time < timeout_threshold:
+                time_elapsed = (timezone.now() - last_msg.report_time).total_seconds() / 3600
+                message = (
+                    f"No data received from family '{family_name}' for {time_elapsed:.1f} hours\n"
+                    f"Last message: {last_msg.report_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                    f"Device: {last_msg.device_id}"
+                )
+                severity = 'warning'
+            else:
+                # Still receiving messages within timeout
+                return None
+        
+        # Check if alert already exists and is still active
+        existing_alert = Alert.objects.filter(
+            rule=rule,
+            alert_type='topic_timeout',
+            status='active'
+        ).first()
+        
+        if existing_alert:
+            # Alert already sent, don't duplicate
+            return None
+        
+        # Create new alert
+        alert = self.create_alert(
+            rule=rule,
+            alert_type='topic_timeout',
+            message=message,
+            severity=severity,
+            details={
+                'family_name': family_name,
+                'timeout_minutes': timeout_minutes,
+                'last_message_time': last_msg.report_time.isoformat() if last_msg else None,
+            }
+        )
+        
+        # Send email notification if configured
+        if rule.config.get('send_email') and rule.notification_recipients:
+            self.send_email_notification(
+                recipients=rule.notification_recipients,
+                subject=rule.notification_subject or f"Alert: {family_name} - No data",
+                message=message
+            )
+        
+        return alert
+
+    def check_api_timeout(self, rule: AlertRule) -> Optional[Alert]:
+        """
+        Check if an API source has not received data within timeout period
+        
+        Args:
+            rule: AlertRule with config containing 'api_name', 'timeout_minutes', 'model'
+            
+        Returns:
+            Alert instance if timeout detected, None otherwise
+        """
+        from datetime import timedelta, date
+        from .models import SigfoxDevice, DatadisConsumption, DatadisMaxPower, WirelessLogic_SIM
+        
+        api_name = rule.config.get('api_name')
+        timeout_minutes = rule.config.get('timeout_minutes', 60)
+        model_name = rule.config.get('model')
+        
+        if not api_name or not model_name:
+            print(f"Rule {rule.name} missing api_name or model in config")
+            return None
+        
+        try:
+            if model_name == 'SigfoxDevice':
+                last_record = SigfoxDevice.objects.order_by('-updated_at').first()
+                last_time = last_record.updated_at if last_record else None
+            elif model_name == 'DatadisConsumption':
+                last_record = DatadisConsumption.objects.order_by('-date', '-time').first()
+                if last_record:
+                    if isinstance(last_record.date, date):
+                        last_time = timezone.make_aware(
+                            timezone.datetime.combine(last_record.date, timezone.datetime.min.time())
+                        )
+                    else:
+                        last_time = last_record.date
+                else:
+                    last_time = None
+            elif model_name == 'DatadisMaxPower':
+                last_record = DatadisMaxPower.objects.order_by('-date', '-time').first()
+                if last_record:
+                    if isinstance(last_record.date, date):
+                        last_time = timezone.make_aware(
+                            timezone.datetime.combine(last_record.date, timezone.datetime.min.time())
+                        )
+                    else:
+                        last_time = last_record.date
+                else:
+                    last_time = None
+            elif model_name == 'WirelessLogic_SIM':
+                last_record = WirelessLogic_SIM.objects.order_by('-last_sync').first()
+                last_time = last_record.last_sync if last_record else None
+            else:
+                print(f"Unknown model: {model_name}")
+                return None
+        except Exception as e:
+            print(f"Error checking {api_name}: {str(e)}")
+            return None
+        
+        if not last_time:
+            # No data ever received
+            message = f"No data received from '{api_name}' (never received any data)"
+            severity = 'critical'
+        else:
+            # Check timeout
+            timeout_threshold = timezone.now() - timedelta(minutes=timeout_minutes)
+            if last_time < timeout_threshold:
+                time_elapsed = (timezone.now() - last_time).total_seconds() / 3600
+                message = (
+                    f"No data received from '{api_name}' for {time_elapsed:.1f} hours\n"
+                    f"Last update: {last_time.strftime('%Y-%m-%d %H:%M:%S')}"
+                )
+                severity = 'warning'
+            else:
+                # Still receiving data within timeout
+                return None
+        
+        # Check if alert already exists and is still active
+        existing_alert = Alert.objects.filter(
+            rule=rule,
+            alert_type='api_timeout',
+            status='active'
+        ).first()
+        
+        if existing_alert:
+            # Alert already sent, don't duplicate
+            return None
+        
+        # Create new alert
+        alert = self.create_alert(
+            rule=rule,
+            alert_type='api_timeout',
+            message=message,
+            severity=severity,
+            details={
+                'api_name': api_name,
+                'model': model_name,
+                'timeout_minutes': timeout_minutes,
+                'last_data_time': last_time.isoformat() if last_time else None,
+            }
+        )
+        
+        # Send email notification if configured
+        if rule.config.get('send_email') and rule.notification_recipients:
+            self.send_email_notification(
+                recipients=rule.notification_recipients,
+                subject=rule.notification_subject or f"Alert: {api_name} - No data",
+                message=message
+            )
+        
+        return alert
+
+
 class DeviceConnectionAlertService(AlertService):
     """Service for device connection monitoring alerts"""
     

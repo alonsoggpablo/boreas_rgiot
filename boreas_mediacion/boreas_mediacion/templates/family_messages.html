@@ -208,18 +208,42 @@
                             {% for item in family_data %}
                                 <tr>
                                     <td>
-                                        <span class="family-name">{{ item.family.name }}</span>
+                                        <span class="family-name">
+                                            {% if item.source == 'mqtt' %}
+                                                {{ item.family.name }}
+                                            {% else %}
+                                                {{ item.family_name }}
+                                            {% endif %}
+                                        </span>
                                     </td>
                                     <td>
                                         <span class="device-id">{{ item.device_id }}</span>
                                     </td>
                                     <td>
                                         <span class="time">
-                                            {{ item.report_time|date:"Y-m-d H:i:s" }}
+                                            {% if item.report_time %}
+                                                {{ item.report_time|date:"Y-m-d H:i:s" }}
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
                                         </span>
                                     </td>
                                     <td>
-                                        <div class="measures">{{ item.measures|safe }}</div>
+                                        <div class="measures">
+                                            {% if item.source == 'mqtt' %}
+                                                {{ item.measures|safe }}
+                                            {% elif item.source == 'sigfox' %}
+                                                CO2: {{ item.measures.co2|default:"N/A" }} | Temp: {{ item.measures.temp|default:"N/A" }}°C | Hum: {{ item.measures.hum|default:"N/A" }}%
+                                            {% elif item.source == 'datadis_consumption' %}
+                                                Consumo: {{ item.measures.consumption_kwh|default:"N/A" }} kWh | Método: {{ item.measures.obtained_method|default:"N/A" }}
+                                            {% elif item.source == 'datadis_power' %}
+                                                Potencia Máx: {{ item.measures.max_power_kw|default:"N/A" }} kW
+                                            {% elif item.source == 'wirelesslogic' %}
+                                                Status: {{ item.measures.status|default:"N/A" }} | Network: {{ item.measures.network|default:"N/A" }} | Tariff: {{ item.measures.tariff|default:"N/A" }} | Data: {{ item.measures.data_used_mb|default:"N/A" }} MB | Cost: {{ item.measures.total_cost|default:"N/A" }}
+                                            {% else %}
+                                                {{ item.measures|safe }}
+                                            {% endif %}
+                                        </div>
                                     </td>
                                 </tr>
                             {% endfor %}

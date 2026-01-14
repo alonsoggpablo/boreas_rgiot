@@ -355,6 +355,7 @@ class AlertRule(models.Model):
         ('disk_space', 'Disk Space'),
         ('device_connection', 'Device Connection'),
         ('aemet_data', 'AEMET Weather Data'),
+        ('topic_message_timeout', 'Topic Message Timeout'),
         ('custom', 'Custom Check'),
     ]
     
@@ -469,6 +470,42 @@ class AlertNotification(models.Model):
     
     def __str__(self):
         return f"{self.notification_type} to {self.recipients[:50]} - {self.status}"
+
+
+class TopicMessageTimeout(models.Model):
+    """Configuración de alertas por timeout de mensajes en tópicos"""
+    
+    topic = models.CharField(max_length=255, unique=True, db_index=True, help_text="Tópico MQTT a monitorear")
+    timeout_minutes = models.IntegerField(default=60, help_text="Minutos sin mensajes antes de alerta")
+    active = models.BooleanField(default=True)
+    
+    # Último mensaje recibido
+    last_message_time = models.DateTimeField(blank=True, null=True, help_text="Hora del último mensaje recibido")
+    alert_sent = models.BooleanField(default=False, help_text="Si ya se envió alerta por timeout")
+    alert_sent_at = models.DateTimeField(blank=True, null=True, help_text="Cuándo se envió la última alerta")
+    
+    # Notificación
+    notification_recipients = models.TextField(help_text="Destinatarios separados por comas", default='')
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['topic']
+        verbose_name = "Topic Message Timeout"
+        verbose_name_plural = "Topic Message Timeouts"
+    
+    def __str__(self):
+        return f"{self.topic} (timeout: {self.timeout_minutes}min)"
+    
+    def is_timed_out(self):
+        """Verificar si el tópico está en timeout"""
+        if not self.last_message_time:
+            return True
+        from datetime import timedelta
+        timeout_threshold = timezone.now() - timedelta(minutes=self.timeout_minutes)
+        return self.last_message_time < timeout_threshold
 
 
 class SystemConfiguration(models.Model):

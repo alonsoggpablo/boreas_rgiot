@@ -1,13 +1,6 @@
 [
 {
   "model": "boreas_mediacion.mqtt_device_family",
-  "pk": 1,
-  "fields": {
-    "name": "AEMET"
-  }
-},
-{
-  "model": "boreas_mediacion.mqtt_device_family",
   "pk": 2,
   "fields": {
     "name": "IAQ_Measures"

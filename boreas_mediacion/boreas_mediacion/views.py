@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, date
 import paho.mqtt.client as mqtt
 import django_filters
 from django.http import JsonResponse
@@ -13,7 +13,7 @@ from django.shortcuts import render
 from django.db.models import Max
 from django.views.generic import ListView
 
-from .models import mqtt_msg, reported_measure, MQTT_broker, MQTT_tx, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, MQTT_device_family
+from .models import mqtt_msg, reported_measure, MQTT_broker, MQTT_tx, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, MQTT_device_family, DatadisConsumption, DatadisMaxPower
 # from .mqtt import client as mqtt_client
 from .serializers import (mqtt_msgSerializer, reported_measureSerializer, MQTT_tx_serializer,
                           WirelessLogic_SIMSerializer, WirelessLogic_SIMListSerializer, 
@@ -304,7 +304,7 @@ class SigfoxCallbackView(APIView):
 
 def family_last_messages(request):
     """
-    View to display the last message received for each MQTT device family.
+    View to display the last message received for each MQTT device family and API data.
     Supports filtering by family name and device_id.
     Shows ALL families, including those without messages.
     """
@@ -318,6 +318,7 @@ def family_last_messages(request):
         
         # Include family even if no messages
         family_data.append({
+            'source': 'mqtt',
             'family': family,
             'last_message': last_msg,
             'device_id': last_msg.device_id if last_msg else 'N/A',
@@ -325,21 +326,99 @@ def family_last_messages(request):
             'measures': last_msg.measures if last_msg else 'No data',
         })
     
+    # Add Sigfox data
+    sigfox_devices = SigfoxDevice.objects.all().order_by('-updated_at')
+    for device in sigfox_devices:
+        last_reading = device.readings.first() if hasattr(device, 'readings') else None
+        family_data.append({
+            'source': 'sigfox',
+            'family_name': 'Sigfox',
+            'device_id': device.device_id,
+            'report_time': device.updated_at,
+            'measures': {
+                'co2': device.last_co2,
+                'temp': device.last_temp,
+                'hum': device.last_hum,
+                'base': device.last_base,
+            },
+        })
+    
+    # Add DATADIS consumption data
+    latest_consumption = DatadisConsumption.objects.all().order_by('-date', '-time').first()
+    if latest_consumption:
+        # Convert date to datetime for consistent sorting
+        consumption_datetime = timezone.make_aware(
+            datetime.combine(latest_consumption.date, datetime.min.time())
+        ) if isinstance(latest_consumption.date, date) else latest_consumption.date
+        family_data.append({
+            'source': 'datadis_consumption',
+            'family_name': 'DATADIS',
+            'device_id': latest_consumption.supply.cups if latest_consumption.supply else 'N/A',
+            'report_time': consumption_datetime,
+            'measures': {
+                'consumption_kwh': latest_consumption.consumption_kwh,
+                'measurement_type': latest_consumption.measurement_type,
+                'obtained_method': latest_consumption.obtained_method,
+            },
+        })
+    
+    # Add DATADIS max power data
+    latest_max_power = DatadisMaxPower.objects.all().order_by('-date', '-time').first()
+    if latest_max_power:
+        # Convert date to datetime for consistent sorting
+        power_datetime = timezone.make_aware(
+            datetime.combine(latest_max_power.date, datetime.min.time())
+        ) if isinstance(latest_max_power.date, date) else latest_max_power.date
+        family_data.append({
+            'source': 'datadis_power',
+            'family_name': 'DATADIS (Power)',
+            'device_id': latest_max_power.supply.cups if latest_max_power.supply else 'N/A',
+            'report_time': power_datetime,
+            'measures': {
+                'max_power_kw': latest_max_power.max_power_kw,
+            },
+        })
+    
+    # Add latest WirelessLogic SIM data (only the most recent)
+    latest_sim = WirelessLogic_SIM.objects.order_by('-last_sync').first()
+    if latest_sim:
+        latest_usage = latest_sim.usage_records.order_by('-period_end').first()
+        family_data.append({
+            'source': 'wirelesslogic',
+            'family_name': 'WirelessLogic',
+            'device_id': latest_sim.msisdn or latest_sim.iccid,
+            'report_time': latest_sim.last_sync,
+            'measures': {
+                'status': latest_sim.status,
+                'network': latest_sim.network,
+                'tariff': latest_sim.tariff_name,
+                'data_used_mb': latest_usage.data_used_mb if latest_usage else 'N/A',
+                'total_cost': latest_usage.total_cost if latest_usage else 'N/A',
+            },
+        })
+    
     # Apply filter if provided
     family_filter = request.GET.get('family_name', '').strip()
 
     if family_filter:
-        family_data = [f for f in family_data if family_filter.lower() == f['family'].name.lower()]
+        family_data = [f for f in family_data if family_filter.lower() == 
+                       (f['family'].name.lower() if 'family' in f and f['family'] else 
+                        f.get('family_name', '').lower())]
     
-    # Sort alphabetically by family name
-    family_data.sort(key=lambda x: x['family'].name.lower())
+    # Sort alphabetically by family/source name
+    family_data.sort(key=lambda x: (x['family'].name.lower() if 'family' in x and x['family'] else 
+                                    x.get('family_name', '').lower()))
     
     # Calculate total messages
     total_messages = mqtt_msg.objects.count()
     
+    # Get list of all data sources for filter
+    all_sources = list(set([f.get('family').name if 'family' in f and f['family'] else 
+                           f.get('family_name', '') for f in family_data if f]))
+    
     context = {
         'family_data': family_data,
-        'families': MQTT_device_family.objects.all().values_list('name', flat=True).distinct(),
+        'families': sorted(all_sources),
         'family_filter': family_filter,
         'total_messages': total_messages,
         'now': timezone.now(),

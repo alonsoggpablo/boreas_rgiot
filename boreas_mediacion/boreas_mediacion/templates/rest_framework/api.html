@@ -1,0 +1,42 @@
+{% extends "rest_framework/base.html" %}
+{% load static %}
+
+{% block head %}
+{{ block.super }}
+<link rel="icon" href="{% static 'favicon.webp' %}" type="image/webp">
+<link rel="apple-touch-icon" href="{% static 'favicon.webp' %}" type="image/webp">
+<style>
+    body {
+        margin-top: 70px;
+    }
+    #topnav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: #000000;
+        height: 70px;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        padding: 0 20px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    #topnav a { color: #ffffff; text-decoration: none; margin-right: 20px; font-size: 14px; }
+    #topnav a:hover { color: #cccccc; }
+    #topnav .brand { font-weight: 700; margin-right: auto; }
+</style>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const nav = document.createElement('div');
+        nav.id = 'topnav';
+        nav.innerHTML = `
+            <a href="/dashboard/family-messages/" class="brand">⚡ IoT Solutions Dashboard</a>
+            <a href="/dashboard/family-messages/">Dashboard</a>
+            <a href="/admin/">Admin</a>
+            <a href="/api/">API</a>
+        `;
+        document.body.insertBefore(nav, document.body.firstChild);
+    });
+</script>
+{% endblock %}
