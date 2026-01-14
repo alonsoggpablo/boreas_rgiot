@@ -9,8 +9,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes, action
 from django.utils import timezone
+from django.shortcuts import render
+from django.db.models import Max
+from django.views.generic import ListView
 
-from .models import mqtt_msg, reported_measure, MQTT_broker, MQTT_tx, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading
+from .models import mqtt_msg, reported_measure, MQTT_broker, MQTT_tx, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, MQTT_device_family
 # from .mqtt import client as mqtt_client
 from .serializers import (mqtt_msgSerializer, reported_measureSerializer, MQTT_tx_serializer,
                           WirelessLogic_SIMSerializer, WirelessLogic_SIMListSerializer, 
@@ -296,5 +299,50 @@ class SigfoxCallbackView(APIView):
             raw_data=payload
         )
 
-        return Response({'status': 'success'}, status=status.HTTP_201_CREATED)
 
+# Web Views for Dashboard
+
+def family_last_messages(request):
+    """
+    View to display the last message received for each MQTT device family.
+    Supports filtering by family name and device_id.
+    Shows ALL families, including those without messages.
+    """
+    # Get all families with their last message
+    families = MQTT_device_family.objects.all()
+    
+    family_data = []
+    for family in families:
+        # Get the last message for this family
+        last_msg = mqtt_msg.objects.filter(device_family=family).order_by('-report_time').first()
+        
+        # Include family even if no messages
+        family_data.append({
+            'family': family,
+            'last_message': last_msg,
+            'device_id': last_msg.device_id if last_msg else 'N/A',
+            'report_time': last_msg.report_time if last_msg else None,
+            'measures': last_msg.measures if last_msg else 'No data',
+        })
+    
+    # Apply filter if provided
+    family_filter = request.GET.get('family_name', '').strip()
+
+    if family_filter:
+        family_data = [f for f in family_data if family_filter.lower() == f['family'].name.lower()]
+    
+    # Sort alphabetically by family name
+    family_data.sort(key=lambda x: x['family'].name.lower())
+    
+    # Calculate total messages
+    total_messages = mqtt_msg.objects.count()
+    
+    context = {
+        'family_data': family_data,
+        'families': MQTT_device_family.objects.all().values_list('name', flat=True).distinct(),
+        'family_filter': family_filter,
+        'total_messages': total_messages,
+        'now': timezone.now(),
+    }
+    
+    return render(request, 'family_messages.html', context)

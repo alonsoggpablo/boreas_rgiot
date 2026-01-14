@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 # from django.db.models.signals import post_save
 # from django.dispatch import receiver
 # from . import mqtt
@@ -12,7 +13,7 @@ class MQTT_device_family(models.Model):
 
 class mqtt_msg(models.Model):
     report_time=models.DateTimeField(auto_now=True)
-    device=models.JSONField(unique=True, default=dict)
+    device=models.JSONField(default=dict)
     device_id=models.CharField(max_length=100, default='unknown')
     measures=models.JSONField(default=dict)
     feed=models.CharField(max_length=100, default='unknown')
@@ -458,7 +459,7 @@ class AlertNotification(models.Model):
     error_message = models.TextField(blank=True, null=True)
     
     # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=timezone.now)
     sent_at = models.DateTimeField(blank=True, null=True)
     
     class Meta:
@@ -468,3 +469,55 @@ class AlertNotification(models.Model):
     
     def __str__(self):
         return f"{self.notification_type} to {self.recipients[:50]} - {self.status}"
+
+
+class SystemConfiguration(models.Model):
+    """Configuración general del sistema"""
+    
+    CONFIG_TYPES = [
+        ('email', 'Email Configuration'),
+        ('alert', 'Alert Configuration'),
+        ('airflow', 'Airflow Configuration'),
+        ('general', 'General Configuration'),
+    ]
+    
+    config_type = models.CharField(max_length=50, choices=CONFIG_TYPES, default='general')
+    key = models.CharField(max_length=100, unique=True, db_index=True, help_text="Clave de configuración (ej: airflow_alert_email)", default='')
+    value = models.TextField(help_text="Valor de la configuración", default='')
+    description = models.TextField(blank=True, null=True, default='', help_text="Descripción de la configuración")
+    
+    # Metadatos
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['config_type', 'key']
+        verbose_name = "System Configuration"
+        verbose_name_plural = "System Configurations"
+    
+    def __str__(self):
+        return f"{self.key} = {self.value[:50]}"
+    
+    @classmethod
+    def get_value(cls, key, default=None):
+        """Obtener valor de configuración por clave"""
+        try:
+            config = cls.objects.get(key=key, active=True)
+            return config.value
+        except cls.DoesNotExist:
+            return default
+    
+    @classmethod
+    def set_value(cls, key, value, config_type='general', description=''):
+        """Establecer o actualizar valor de configuración"""
+        config, created = cls.objects.update_or_create(
+            key=key,
+            defaults={
+                'value': value,
+                'config_type': config_type,
+                'description': description,
+                'active': True
+            }
+        )
+        return config

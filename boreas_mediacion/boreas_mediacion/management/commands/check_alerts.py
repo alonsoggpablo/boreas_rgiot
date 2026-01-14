@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from boreas_mediacion.alert_service import DiskSpaceAlertService, DeviceConnectionAlertService
+from boreas_mediacion.alert_service import DiskSpaceAlertService, DeviceConnectionAlertService, AlertService
 from boreas_mediacion.models import AlertRule
 from django.utils import timezone
 
@@ -24,6 +24,7 @@ class Command(BaseCommand):
         
         disk_service = DiskSpaceAlertService()
         device_service = DeviceConnectionAlertService()
+        generic_service = AlertService()
         
         results = {
             'checked': 0,
@@ -61,6 +62,9 @@ class Command(BaseCommand):
                     alert = disk_service.check_disk_space_rule(rule)
                 elif rule.rule_type == 'device_connection':
                     alert = device_service.check_device_connection_rule(rule)
+                else:
+                    # Generic trigger for any other rule type
+                    alert = generic_service.check_generic_rule(rule)
                 
                 # Update last check
                 rule.last_check = timezone.now()

@@ -447,13 +447,21 @@ def on_connect(mqtt_client, userdata, flags, rc):
     if rc == 0:
         logger.info('MQTT connected successfully')
         mqtt_client.subscribe(get_topics_list())
-
-
-
-
-
     else:
         logger.error('MQTT bad connection. Code: %s', rc)
+
+def on_disconnect(mqtt_client, userdata, rc):
+    if rc != 0:
+        logger.warning(f'Unexpected disconnection. Code: {rc}')
+    else:
+        logger.info('MQTT disconnected')
+    # Attempt to reconnect
+    try:
+        mqtt_client.reconnect()
+        logger.info('MQTT reconnect initiated')
+    except Exception as e:
+        logger.warning(f'Could not reconnect to MQTT broker - {str(e)}')
+
 def on_message(mqtt_client, userdata, msg):
     topic=msg.topic
     payload = str(msg.payload.decode("utf-8", "ignore"))
@@ -525,6 +533,7 @@ try:
 
     client = mqtt.Client()
     client.on_connect = on_connect
+    client.on_disconnect = on_disconnect
     client.on_message = on_message
     client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
     client.tls_set(certfile=None,
@@ -582,10 +591,12 @@ def get_mqtt_status():
         return {"status": "not_initialized", "running": False}
     return {"status": "initialized", "running": mqtt_client_running}
 
-# MQTT client is stopped by default
-# Use admin actions or API endpoint to start/stop the client
+# MQTT client autostart on import
+# NOTE: MQTT client now runs in separate mqtt_service container
+# This code kept for backwards compatibility with management commands
 # if client is not None:
 #     start_mqtt_client()
+#     logger.info("MQTT client started automatically on app initialization")
 
 
 @receiver(post_save, sender=MQTT_tx)

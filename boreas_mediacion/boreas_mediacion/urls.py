@@ -32,6 +32,7 @@ router.register(r'sigfox/readings', views.SigfoxReadingViewSet, basename='sigfox
 
 urlpatterns = [
     path('', RedirectView.as_view(url='/api/mqtt_msgs/', permanent=False)),
+    path('dashboard/family-messages/', views.family_last_messages, name='family_messages'),
     path('api/', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('admin/', admin.site.urls),

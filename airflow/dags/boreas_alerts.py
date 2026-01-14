@@ -6,6 +6,12 @@ Orchestrates alert checking using Apache Airflow:
 - Device connection monitoring (daily at 09:00)
 - Alert cleanup (daily at 02:00)
 """
+import sys
+import os
+
+# Add Django project to Python path FIRST, before any imports
+sys.path.insert(0, '/app')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'boreas_mediacion.settings')
 
 from datetime import datetime, timedelta
 from airflow import DAG
@@ -13,11 +19,25 @@ from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.utils.dates import days_ago
 
+def get_airflow_email():
+    """Get Airflow failure notification email from database"""
+    import os
+    import django
+    
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'boreas_mediacion.settings')
+    django.setup()
+    
+    from boreas_mediacion.models import SystemConfiguration
+    
+    email = SystemConfiguration.get_value('airflow_failure_email', 'alonsogpablo@rggestionyenergia.com')
+    return [email]
+
 # Default DAG arguments
 default_args = {
     'owner': 'boreas',
     'depends_on_past': False,
     'start_date': days_ago(1),
+    'email': get_airflow_email(),
     'email_on_failure': True,
     'email_on_retry': False,
     'retries': 2,
@@ -54,7 +74,8 @@ def check_alert_rule_type(rule_type: str):
     from boreas_mediacion.models import AlertRule
     from boreas_mediacion.alert_service import (
         DiskSpaceAlertService, 
-        DeviceConnectionAlertService
+        DeviceConnectionAlertService,
+        AlertService
     )
     from django.utils import timezone
     
@@ -64,6 +85,7 @@ def check_alert_rule_type(rule_type: str):
     
     disk_service = DiskSpaceAlertService()
     device_service = DeviceConnectionAlertService()
+    generic_service = AlertService()
     
     alerts_triggered = 0
     rules_checked = 0
@@ -102,6 +124,9 @@ def check_alert_rule_type(rule_type: str):
                 alert = disk_service.check_disk_space_rule(rule)
             elif rule.rule_type == 'device_connection':
                 alert = device_service.check_device_connection_rule(rule)
+            else:
+                # Generic trigger for any other rule type (aemet_data, custom, etc.)
+                alert = generic_service.check_generic_rule(rule)
             
             # Update last check
             rule.last_check = timezone.now()

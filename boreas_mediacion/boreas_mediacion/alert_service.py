@@ -129,6 +129,49 @@ class AlertService:
         
         return notification
     
+    def check_generic_rule(self, rule: AlertRule) -> Optional[Alert]:
+        """
+        Generic alert trigger for any rule type.
+        Creates an alert based on rule configuration without type-specific logic.
+        
+        Args:
+            rule: AlertRule to check
+            
+        Returns:
+            Alert if rule is configured to trigger, None otherwise
+        """
+        config = rule.config or {}
+        
+        # Check if rule is configured to trigger automatically
+        auto_trigger = config.get('auto_trigger', True)  # Default: trigger on each check
+        
+        if auto_trigger:
+            message = config.get('message', f"Alert triggered by rule: {rule.name}")
+            severity = config.get('severity', 'warning')
+            
+            # Check if there's already an active alert for this rule (avoid duplicates)
+            existing_active = Alert.objects.filter(
+                rule=rule,
+                alert_type=rule.rule_type,
+                status='active'
+            ).first()
+            
+            if existing_active:
+                # Update timestamp instead of creating duplicate
+                existing_active.triggered_at = timezone.now()
+                existing_active.save(update_fields=['triggered_at'])
+                return None
+            
+            return self.create_alert(
+                rule=rule,
+                alert_type=rule.rule_type,
+                message=message,
+                severity=severity,
+                details=config.get('details', {})
+            )
+        
+        return None
+    
     def check_active_rules(self) -> List[Alert]:
         """
         Check all active alert rules and trigger alerts if needed
@@ -152,7 +195,8 @@ class AlertService:
             elif rule.rule_type == 'device_connection':
                 alert = self.check_device_connection_rule(rule)
             else:
-                alert = None
+                # Generic fallback for any other rule type
+                alert = self.check_generic_rule(rule)
             
             # Update last check time
             rule.last_check = timezone.now()

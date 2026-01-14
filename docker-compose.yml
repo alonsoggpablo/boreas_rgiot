@@ -37,10 +37,34 @@ services:
       - EMAIL_HOST_PASSWORD=neor9u9i9r7p
       - EMAIL_USE_TLS=True
       - DEFAULT_FROM_EMAIL=alonsogpablo@rggestionyenergia.com
+      - MQTT_SERVER=mqtt.rg-iotsolutions.com
+      - MQTT_PORT=1883
+      - MQTT_USER=pablo
+      - MQTT_PASSWORD=pabloDev1234
     depends_on:
       db:
         condition: service_healthy
     restart: unless-stopped
+
+  mqtt:
+    build: .
+    container_name: boreas_mqtt
+    command: python /app/mqtt_service.py
+    volumes:
+      - .:/app
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=your-secret-key-here-change-in-production
+      - DATABASE_URL=postgresql://boreas_user:boreas_password@db:5432/boreas_db
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   nginx:
     image: nginx:alpine

@@ -5,7 +5,8 @@ from django.http import HttpResponseRedirect
 from django.utils import timezone
 from .models import mqtt_msg, MQTT_device_family, MQTT_broker, MQTT_feed, sensor_command, sensor_actuacion, router_get, \
     router_parameter, reported_measure, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, \
-    DatadisCredentials, DatadisSupply, DatadisConsumption, DatadisMaxPower, AlertRule, Alert, AlertNotification
+    DatadisCredentials, DatadisSupply, DatadisConsumption, DatadisMaxPower, AlertRule, Alert, AlertNotification, \
+    SystemConfiguration
 from .models import MQTT_topic
 from . import mqtt as mqtt_module
 from .wirelesslogic_service import WirelessLogicService
@@ -854,3 +855,36 @@ class DatadisMaxPowerAdmin(admin.ModelAdmin):
     supply_cups.short_description = 'CUPS'
     supply_cups.admin_order_field = 'supply__cups'
 
+
+@admin.register(SystemConfiguration)
+class SystemConfigurationAdmin(admin.ModelAdmin):
+    list_display = ('key', 'config_type', 'value_preview', 'active', 'updated_at')
+    list_filter = ('config_type', 'active', 'updated_at')
+    search_fields = ('key', 'value', 'description')
+    readonly_fields = ('created_at', 'updated_at')
+    
+    fieldsets = (
+        ('Configuración', {
+            'fields': ('config_type', 'key', 'value', 'description')
+        }),
+        ('Estado', {
+            'fields': ('active', 'created_at', 'updated_at')
+        }),
+    )
+    
+    def value_preview(self, obj):
+        """Muestra vista previa del valor"""
+        if len(obj.value) > 100:
+            return obj.value[:97] + '...'
+        return obj.value
+    value_preview.short_description = 'Value'
+    
+    def save_model(self, request, obj, form, change):
+        """Override para crear configuraciones iniciales si es necesario"""
+        super().save_model(request, obj, form, change)
+        
+        # Mensaje de confirmación
+        if change:
+            self.message_user(request, f'Configuración "{obj.key}" actualizada correctamente.', messages.SUCCESS)
+        else:
+            self.message_user(request, f'Configuración "{obj.key}" creada correctamente.', messages.SUCCESS)

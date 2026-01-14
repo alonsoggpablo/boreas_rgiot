@@ -2,23 +2,35 @@
 Airflow DAG to monitor AEMET weather data arrivals
 Runs every 5 minutes and sends email notifications when new data is detected
 """
+import sys
+import os
+
+# Add Django project to Python path FIRST, before any imports
+sys.path.insert(0, '/app')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'boreas_mediacion.settings')
+
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 import subprocess
-import sys
-import os
-
-
-# Add Django project to Python path
-sys.path.insert(0, '/app')
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'boreas_mediacion.settings')
 
 
 def check_aemet_data(**context):
     """
     Execute Django management command to check for AEMET data
     """
+    import os
+    import django
+    
+    # Setup Django to access database
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'boreas_mediacion.settings')
+    django.setup()
+    
+    from boreas_mediacion.models import SystemConfiguration
+    
+    # Get email recipient from database configuration
+    recipient = SystemConfiguration.get_value('aemet_alert_email', 'alonsogpablo@rggestionyenergia.com')
+    
     try:
         # Run the Django management command
         result = subprocess.run(
@@ -27,7 +39,7 @@ def check_aemet_data(**context):
                 '/app/manage.py',
                 'check_aemet_data',
                 '--minutes', '5',
-                '--recipient', 'alonsogpablo@gestionyenergia.com'
+                '--recipient', recipient
             ],
             cwd='/app',
             capture_output=True,
@@ -56,11 +68,24 @@ def check_aemet_data(**context):
         raise Exception(f"Error checking AEMET data: {str(e)}")
 
 
+def get_airflow_email():
+    """Get Airflow failure notification email from database"""
+    import os
+    import django
+    
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'boreas_mediacion.settings')
+    django.setup()
+    
+    from boreas_mediacion.models import SystemConfiguration
+    
+    email = SystemConfiguration.get_value('airflow_failure_email', 'alonsogpablo@rggestionyenergia.com')
+    return [email]
+
 # Default arguments for the DAG
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
-    'email': ['alonsogpablo@gestionyenergia.com'],
+    'email': get_airflow_email(),
     'email_on_failure': True,
     'email_on_retry': False,
     'retries': 1,

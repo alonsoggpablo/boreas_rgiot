@@ -55,7 +55,3 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
-
-
-volumes:
-  # No airflow_postgres_data needed, db volume is defined in main compose file
