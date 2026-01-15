@@ -416,12 +416,17 @@ def family_last_messages(request):
     all_sources = list(set([f.get('family').name if 'family' in f and f['family'] else 
                            f.get('family_name', '') for f in family_data if f]))
     
+    # Extract hostname for Airflow link
+    host_header = request.get_host()
+    hostname = host_header.split(':')[0] if ':' in host_header else host_header
+    
     context = {
         'family_data': family_data,
         'families': sorted(all_sources),
         'family_filter': family_filter,
         'total_messages': total_messages,
         'now': timezone.now(),
+        'airflow_host': f'{hostname}:8080',
     }
     
     return render(request, 'family_messages.html', context)
