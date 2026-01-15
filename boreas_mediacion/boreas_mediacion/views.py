@@ -421,7 +421,8 @@ def family_last_messages(request):
     http_host = (request.META.get('HTTP_X_FORWARDED_HOST') or 
                  request.META.get('HTTP_HOST') or 
                  'localhost')
-    hostname = http_host.split(':')[0] if ':' in http_host else http_host
+    # Use rsplit with maxsplit=1 to split only on the last colon (port separator)
+    hostname = http_host.rsplit(':', 1)[0] if ':' in http_host else http_host
     
     context = {
         'family_data': family_data,
