@@ -416,8 +416,11 @@ def family_last_messages(request):
     all_sources = list(set([f.get('family').name if 'family' in f and f['family'] else 
                            f.get('family_name', '') for f in family_data if f]))
     
-    # Extract hostname for Airflow link from HTTP_HOST header
-    http_host = request.META.get('HTTP_HOST', 'localhost')
+    # Extract hostname for Airflow link - check multiple headers
+    # Try HTTP_X_FORWARDED_HOST first (set by proxies), then HTTP_HOST, then fallback
+    http_host = (request.META.get('HTTP_X_FORWARDED_HOST') or 
+                 request.META.get('HTTP_HOST') or 
+                 'localhost')
     hostname = http_host.split(':')[0] if ':' in http_host else http_host
     
     context = {
