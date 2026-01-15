@@ -35,6 +35,10 @@ docker compose run --rm web python manage.py collectstatic --noinput --clear
 echo "🚀 Starting all services..."
 docker compose -f docker-compose.yml -f docker-compose.airflow.yml up -d
 
+# Restart nginx to pick up config changes
+echo "🔄 Restarting nginx..."
+docker compose restart nginx
+
 # Show container status
 echo ""
 echo "========================================="
