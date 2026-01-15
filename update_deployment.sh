@@ -13,15 +13,15 @@ git pull origin main
 
 # Stop containers
 echo "🛑 Stopping containers..."
-docker-compose -f docker-compose.yml -f docker-compose.airflow.yml down
+docker compose -f docker-compose.yml -f docker-compose.airflow.yml down
 
 # Rebuild web container
 echo "🔨 Rebuilding web container..."
-docker-compose build web
+docker compose build web
 
 # Start database first
 echo "🗄️  Starting database..."
-docker-compose up -d db
+docker compose up -d db
 
 # Wait for database to be healthy
 echo "⏳ Waiting for database to be ready..."
@@ -29,18 +29,18 @@ sleep 10
 
 # Collect static files
 echo "📦 Collecting static files..."
-docker-compose run --rm web python manage.py collectstatic --noinput --clear
+docker compose run --rm web python manage.py collectstatic --noinput --clear
 
 # Start all services
 echo "🚀 Starting all services..."
-docker-compose -f docker-compose.yml -f docker-compose.airflow.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.airflow.yml up -d
 
 # Show container status
 echo ""
 echo "========================================="
 echo "✅ Deployment completed!"
 echo "========================================="
-docker-compose -f docker-compose.yml -f docker-compose.airflow.yml ps
+docker compose -f docker-compose.yml -f docker-compose.airflow.yml ps
 
 echo ""
 echo "Services:"
