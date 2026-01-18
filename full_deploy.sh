@@ -71,7 +71,8 @@ docker compose exec web python boreas_mediacion/manage.py loaddata \
     boreas_mediacion/fixtures/02_mqtt_brokers.json \
     boreas_mediacion/fixtures/03_mqtt_topics.json \
     boreas_mediacion/fixtures/04_sensor_actuaciones.json \
-    boreas_mediacion/fixtures/05_router_parameters.json
+    boreas_mediacion/fixtures/05_router_parameters.json \
+    boreas_mediacion/fixtures/06_datadis_credentials.json
 
 # Create superuser (automated)
 echo "👤 Creating superuser (if not exists)..."
