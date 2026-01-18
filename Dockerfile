@@ -22,8 +22,9 @@ COPY ./requirements.txt /app/
 # Instalar dependencias de Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar todo el código Django (manage.py y aplicación)
-COPY ./boreas_mediacion /app/
+# Copiar manage.py y el paquete boreas_mediacion por separado
+COPY ./boreas_mediacion/manage.py /app/manage.py
+COPY ./boreas_mediacion/boreas_mediacion /app/boreas_mediacion
 
 # Crear directorio para archivos estáticos
 RUN mkdir -p /app/staticfiles /app/media
