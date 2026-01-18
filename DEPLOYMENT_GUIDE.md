@@ -55,6 +55,18 @@ Complete guide for deploying Boreas IoT system with Django, PostgreSQL, MQTT, an
    - API: http://localhost/api/
    - Airflow: http://localhost:8080/
 
+7. **Load initial fixtures (optional, recommended for first setup)**
+   ```bash
+   # Load all fixtures in order
+   docker compose exec web python manage.py loaddata boreas_mediacion/fixtures/01_mqtt_device_families.json
+   docker compose exec web python manage.py loaddata boreas_mediacion/fixtures/02_mqtt_brokers.json
+   docker compose exec web python manage.py loaddata boreas_mediacion/fixtures/03_mqtt_topics.json
+   docker compose exec web python manage.py loaddata boreas_mediacion/fixtures/04_sensor_actuaciones.json
+   docker compose exec web python manage.py loaddata boreas_mediacion/fixtures/05_router_parameters.json
+   ```
+
+   This will populate the database with initial MQTT families, brokers, topics, sensor actions, and router parameters.
+
 ---
 
 ## Remote Production Deployment
