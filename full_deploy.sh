@@ -23,10 +23,22 @@ echo "🗄️  Starting database..."
 docker compose up -d db
 sleep 10
 
+
 # Start web service (needed for management commands)
 echo "🟢 Starting web service..."
 docker compose up -d web
-sleep 5
+
+# Wait for web container to be healthy
+echo "⏳ Waiting for web container to be healthy..."
+for i in {1..30}; do
+    status=$(docker inspect --format='{{.State.Health.Status}}' boreas_app 2>/dev/null || echo "starting")
+    if [ "$status" = "healthy" ] || [ "$status" = "running" ]; then
+        echo "Web container is $status."
+        break
+    fi
+    echo "Waiting... ($i)"
+    sleep 2
+done
 
 # Run migrations
 
