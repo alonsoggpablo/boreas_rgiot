@@ -29,7 +29,14 @@ sleep 10
 
 # Collect static files
 echo "📦 Collecting static files..."
-docker compose run --rm web python manage.py collectstatic --noinput --clear
+# First remove old staticfiles to ensure fresh collection
+docker compose exec -T web rm -rf /app/staticfiles/*
+# Now collect all static files including DRF
+docker compose exec -T web python manage.py collectstatic --noinput --clear --verbosity=2
+
+# Verify static files were collected
+echo "✓ Verifying static files..."
+docker compose exec -T web ls -la /app/staticfiles/ | head -20
 
 # Start all services
 echo "🚀 Starting all services..."
