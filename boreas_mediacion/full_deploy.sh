@@ -16,22 +16,26 @@ git pull origin main
 
 echo "🛑 Stopping containers..."
 docker compose down
+docker compose -f docker-compose.airflow.yml down
 
 # Build containers
 
 echo "🔨 Building containers..."
 docker compose build
+docker compose -f docker-compose.airflow.yml build
 
 # Start database first
 
 echo "🗄️  Starting database..."
 docker compose up -d db
+docker compose -f docker-compose.airflow.yml up -d postgres
 sleep 10
 
 
 # Start web service (needed for management commands)
 echo "🟢 Starting web service..."
 docker compose up -d web
+docker compose -f docker-compose.airflow.yml up -d airflow-webserver airflow-scheduler
 
 # Wait for web container to be healthy
 echo "⏳ Waiting for web container to be healthy..."
@@ -72,6 +76,7 @@ docker compose exec web python manage.py createsuperuser || true
 
 echo "🚀 Starting all services..."
 docker compose up -d
+docker compose -f docker-compose.airflow.yml up -d
 
 # Remove old instructions file if unnecessary
 if [ -f INSTRUCCIONES_DESPLIEGUE.TXT ]; then
@@ -83,6 +88,7 @@ fi
 
 echo "🔎 Verifying containers..."
 docker compose ps
+docker compose -f docker-compose.airflow.yml ps
 
 echo "🔎 Verifying dashboard access..."
 curl -I http://localhost/
