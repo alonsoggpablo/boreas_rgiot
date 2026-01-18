@@ -1,3 +1,8 @@
+PROJECT_ROOT_MARKER="manage.py"
+if [ ! -f "$PROJECT_ROOT_MARKER" ]; then
+    echo "❌ ERROR: Please run this script from the project root directory (where manage.py is located)."
+    exit 1
+fi
 #!/bin/bash
 # Boreas full deployment script
 set -e
