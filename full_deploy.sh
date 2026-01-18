@@ -23,6 +23,11 @@ echo "🗄️  Starting database..."
 docker compose up -d db
 sleep 10
 
+# Start web service (needed for management commands)
+echo "🟢 Starting web service..."
+docker compose up -d web
+sleep 5
+
 # Run migrations
 
 echo "📦 Running migrations..."
