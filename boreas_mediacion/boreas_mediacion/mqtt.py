@@ -174,16 +174,16 @@ class MQTT_device_measure:
 def dict_to_json_file(dict,device):
     with open(device+'.json','w') as outfile:
         json.dump(dict,outfile)
-def update_device_field(device,field,field_value):
-    field_dict={}
-    field_dict[field]=field_value
-    field_dict_str=str(field_dict).replace("'",'"')
-    device_str=str(device).replace("'",'"')
-    query = f"""update boreas_mediacion_mqtt_msg set report_time=now(),measures=measures ||'{field_dict_str}' where device= '{device_str}' """.replace("\\","")
-    cursor.execute(query=query)
-    conn.commit()
+from django.db import connection
 
-
+def update_device_field(device, field, field_value):
+    field_dict = {field: field_value}
+    field_dict_str = str(field_dict).replace("'", '"')
+    device_str = str(device).replace("'", '"')
+    query = f"""update boreas_mediacion_mqtt_msg set report_time=now(),measures=measures ||'{field_dict_str}' where device= '{device_str}' """.replace("\\", "")
+    with connection.cursor() as cursor:
+        cursor.execute(query)
+    # Django autocommits by default
     return
 
 def find_pattern(pattern, string):
