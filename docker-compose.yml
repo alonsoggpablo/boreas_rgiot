@@ -22,6 +22,7 @@ services:
     container_name: boreas_app
     command: gunicorn --bind 0.0.0.0:8000 --workers 4 --chdir /app boreas_mediacion.wsgi:application
     volumes:
+      - .:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     ports:
