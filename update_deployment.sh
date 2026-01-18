@@ -38,6 +38,24 @@ docker compose exec -T web python manage.py collectstatic --noinput --clear --ve
 echo "✓ Verifying static files..."
 docker compose exec -T web ls -la /app/staticfiles/ | head -20
 
+# Run migrations
+
+echo "📦 Running migrations..."
+docker compose exec web python manage.py migrate
+
+# Load fixtures
+
+echo "📦 Loading fixtures..."
+for fixture in boreas_mediacion/fixtures/*.json; do
+    echo "   → $fixture"
+    docker compose exec web python manage.py loaddata $fixture
+    sleep 1
+done
+
+# Create superuser (interactive)
+echo "👤 Creating superuser (if not exists)..."
+docker compose exec web python manage.py createsuperuser || true
+
 # Start all services
 echo "🚀 Starting all services..."
 docker compose -f docker-compose.yml -f docker-compose.airflow.yml up -d
