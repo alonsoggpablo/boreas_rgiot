@@ -47,13 +47,15 @@ docker compose exec web python manage.py migrate
 echo "📦 Collecting static files..."
 docker compose exec web python manage.py collectstatic --noinput --clear
 
-# Load fixtures
-echo "📦 Loading fixtures..."
-for fixture in boreas_mediacion/fixtures/*.json; do
-    echo "   → $fixture"
-    docker compose exec web python manage.py loaddata $fixture
-    sleep 1
-done
+
+# Load main fixtures in a single command
+echo "📦 Loading main fixtures..."
+docker compose exec web python boreas_mediacion/manage.py loaddata \
+    boreas_mediacion/fixtures/01_mqtt_device_families.json \
+    boreas_mediacion/fixtures/02_mqtt_brokers.json \
+    boreas_mediacion/fixtures/03_mqtt_topics.json \
+    boreas_mediacion/fixtures/04_sensor_actuaciones.json \
+    boreas_mediacion/fixtures/05_router_parameters.json
 
 # Create superuser (interactive)
 echo "👤 Creating superuser (if not exists)..."
