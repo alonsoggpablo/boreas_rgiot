@@ -14,6 +14,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     gcc \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar archivos de requisitos
@@ -22,8 +23,7 @@ COPY ./requirements.txt /app/
 # Instalar dependencias de Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar manage.py y el paquete boreas_mediacion por separado
-COPY ./boreas_mediacion/manage.py /app/manage.py
+COPY ./boreas_mediacion/manage.py /app/boreas_mediacion/manage.py
 COPY ./boreas_mediacion/boreas_mediacion /app/boreas_mediacion
 
 # Crear directorio para archivos estáticos
@@ -32,8 +32,9 @@ RUN mkdir -p /app/staticfiles /app/media
 # Recopilar archivos estáticos (include DRF and other third-party apps)
 RUN cd /app && python manage.py collectstatic --noinput --clear 2>&1 || echo "Static files collection completed"
 
-# Crear usuario no-root para seguridad
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+# Ensure migrations directory exists and is writable by appuser (after useradd)
+RUN mkdir -p /app/boreas_mediacion/boreas_mediacion/migrations && chown -R appuser:appuser /app/boreas_mediacion/boreas_mediacion/migrations && chmod -R 775 /app/boreas_mediacion/boreas_mediacion/migrations
 USER appuser
 
 # Exponer puerto

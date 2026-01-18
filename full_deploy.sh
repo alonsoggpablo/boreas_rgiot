@@ -11,6 +11,14 @@ echo "🛑 Stopping containers..."
 docker compose down
 docker compose -f docker-compose.yml -f docker-compose.airflow.yml down
 
+# Remove Postgres data volume for a clean DB reset
+echo "🗑️ Removing Postgres data volume..."
+docker volume rm boreas_rgiot_postgres_data || true
+
+# Remove all Django migration files for a clean migration history
+echo "🗑️ Removing all Django migration files..."
+find boreas_mediacion/boreas_mediacion/migrations -type f ! -name '__init__.py' -delete
+
 # Build containers (main and airflow)
 echo "🔨 Building containers..."
 docker compose build
@@ -24,8 +32,12 @@ sleep 10
 
 # Start web service (needed for management commands)
 echo "🟢 Starting web service..."
-docker compose up -d web
-docker compose -f docker-compose.yml -f docker-compose.airflow.yml up -d airflow-webserver airflow-scheduler
+docker compose up -d web --remove-orphans
+docker compose -f docker-compose.yml -f docker-compose.airflow.yml up -d airflow-webserver airflow-scheduler --remove-orphans
+
+# Start nginx proxy
+echo "🟢 Starting nginx proxy..."
+docker compose up -d nginx
 
 # Wait for web container to be healthy
 echo "⏳ Waiting for web container to be healthy..."
@@ -39,13 +51,17 @@ for i in {1..30}; do
     sleep 2
 done
 
-# Run migrations
-echo "📦 Running migrations..."
-docker compose exec web python manage.py migrate
+echo "📦 Resetting and running migrations..."
+echo "🔧 Fixing permissions for migrations directory (host, UID/GID 1000 for container)..."
+sudo chown -R 1000:1000 boreas_mediacion/boreas_mediacion/migrations
+sudo chmod -R 775 boreas_mediacion/boreas_mediacion/migrations
 
-# Collect static files
+# Run makemigrations before migrate using correct path
+docker compose exec web python /app/boreas_mediacion/manage.py makemigrations
+docker compose exec web python /app/boreas_mediacion/manage.py migrate
+
 echo "📦 Collecting static files..."
-docker compose exec web python manage.py collectstatic --noinput --clear
+docker compose exec web python /app/boreas_mediacion/manage.py collectstatic --noinput --clear
 
 
 # Load main fixtures in a single command
@@ -57,9 +73,13 @@ docker compose exec web python boreas_mediacion/manage.py loaddata \
     boreas_mediacion/fixtures/04_sensor_actuaciones.json \
     boreas_mediacion/fixtures/05_router_parameters.json
 
-# Create superuser (interactive)
+# Create superuser (automated)
 echo "👤 Creating superuser (if not exists)..."
-docker compose exec web python manage.py createsuperuser || true
+docker compose exec web python /app/boreas_mediacion/manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); username='pablo'; password='boreas2026'; email='pablo@localhost';
+if not User.objects.filter(username=username).exists():
+    User.objects.create_superuser(username=username, email=email, password=password)
+else:
+    print('Superuser already exists.')"
 
 # Start all services (main and airflow)
 echo "🚀 Starting all services..."
