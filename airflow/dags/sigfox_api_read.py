@@ -13,11 +13,38 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'boreas_mediacion.settings')
 
 def read_sigfox_api():
     import django
+    import requests
+    import json
     django.setup()
-    from boreas_mediacion.models import SigfoxDevice
-    # Implement the actual API read logic here
-    # Example: SigfoxDevice.sync_all_devices() or similar
-    print("SIGFOX API read completed.")
+    from boreas_mediacion.models import SigfoxDevice, SigfoxReading
+    from django.utils import timezone
+    # Set your credentials here
+    usr = "rgiot"
+    pwd = "rgiot"
+    # Example device and data (replace with real logic if needed)
+    device_id = "auto_sigfox_dag"
+    data_hex = "102d0501f40f"
+    ts = int(timezone.now().timestamp())
+    url = "http://web:8000/api/sigfox"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Basic cmdpb3Q6cmdpb3Q="
+    }
+    payload = {"device": device_id, "data": data_hex, "timestamp": ts}
+    try:
+        response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=10)
+        print(f"POST {url} status: {response.status_code}")
+        print(f"Response: {response.text}")
+    except Exception as e:
+        print(f"Error posting to Sigfox API: {e}")
+    # Confirm data saved
+    if SigfoxDevice.objects.filter(device_id=device_id).exists():
+        device = SigfoxDevice.objects.get(device_id=device_id)
+        readings = SigfoxReading.objects.filter(device=device)
+        print(f"Readings count: {readings.count()}")
+        for r in readings:
+            print(r.timestamp, r.temp, r.hum, r.co2, r.base, r.raw_data)
+    print("SIGFOX API read and save completed.")
 
 default_args = {
     'owner': 'boreas',
