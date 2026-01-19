@@ -40,7 +40,7 @@ class DatadisService:
         url = f"{self.AUTH_URL}?username={self.credentials.username}&password={self.credentials.password}"
         
         try:
-            response = self.session.post(url, timeout=30)
+            response = self.session.post(url, timeout=120)
             response.raise_for_status()
             
             token = response.text.strip()
@@ -93,7 +93,7 @@ class DatadisService:
         }
         
         try:
-            response = self.session.get(url, headers=headers, params=params, timeout=30)
+            response = self.session.get(url, headers=headers, params=params, timeout=120)
             response.raise_for_status()
             return response.json()
         
@@ -102,7 +102,7 @@ class DatadisService:
                 # Token inválido, intentar reautenticar
                 token = self.authenticate()
                 headers["Authorization"] = f"Bearer {token}"
-                response = self.session.get(url, headers=headers, params=params, timeout=30)
+                response = self.session.get(url, headers=headers, params=params, timeout=120)
                 response.raise_for_status()
                 return response.json()
             raise

@@ -225,11 +225,13 @@ def sensor_message_handler(payload,topic):
 
         if parameter=='total_returned':
             try:
-                params=mqtt_msg.objects.filter(device_id=id).values_list('measures',flat=True)[0]
-                payload_dict=str({'device':{'id':id,'circuit':circuit,'type':type,'relay':relay},'measures':params})
-                topic_feed=MQTT_feed.objects.filter(name=feed).values_list('topic__topic',flat=True).first()
+                params_qs = mqtt_msg.objects.filter(device_id=id).values_list('measures', flat=True)
+                params = params_qs[0] if params_qs else None
+                payload_dict = str({'device': {'id': id, 'circuit': circuit, 'type': type, 'relay': relay}, 'measures': params})
+                topic_feed_qs = MQTT_feed.objects.filter(name=feed).values_list('topic__topic', flat=True)
+                topic_feed = topic_feed_qs[0] if topic_feed_qs else None
                 if topic_feed:
-                    MQTT_tx(topic=topic_feed.strip('/#'),payload=payload_dict).save()
+                    MQTT_tx(topic=topic_feed.strip('/#'), payload=payload_dict).save()
             except Exception as e:
                 logger.warning(f"Could not process total_returned - {str(e)}")
     except Exception as e:
@@ -285,10 +287,12 @@ def router_message_handler(payload,topic):
             pass
 
     if parameter=='name':
-        params=mqtt_msg.objects.filter(device_id=device_id).values_list('measures',flat=True)[0]
-        payload_dict=str({'device':{'id':device_id,'model':value},'params':params})
-        topic=MQTT_feed.objects.filter(name=feed).values_list('topic__topic',flat=True)[0].strip('/#')
-        MQTT_tx(topic=topic,payload=payload_dict).save()
+        params_qs = mqtt_msg.objects.filter(device_id=device_id).values_list('measures', flat=True)
+        params = params_qs[0] if params_qs else None
+        payload_dict = str({'device': {'id': device_id, 'model': value}, 'params': params})
+        topics_qs = MQTT_feed.objects.filter(name=feed).values_list('topic__topic', flat=True)
+        topic = topics_qs[0].strip('/#') if topics_qs else None
+        MQTT_tx(topic=topic, payload=payload_dict).save()
 
 def router_report_message_handler(payload,topic):
 

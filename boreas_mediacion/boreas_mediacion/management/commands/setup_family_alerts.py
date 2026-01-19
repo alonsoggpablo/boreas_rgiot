@@ -67,6 +67,44 @@ class Command(BaseCommand):
                 self.style.SUCCESS(f'✓ Created rule: {rule_name}')
             )
         
+        # Create disk usage alert rule
+        disk_rule_name = "Host disk usage over 70%"
+        if not AlertRule.objects.filter(name=disk_rule_name, rule_type='disk_space').exists():
+            AlertRule.objects.create(
+                name=disk_rule_name,
+                rule_type='disk_space',
+                description='Alert if host disk usage exceeds 70%',
+                threshold=70,
+                check_interval_minutes=60,
+                notification_type='email',
+                notification_recipients=email,
+                notification_subject='Alert: Host disk usage over 70%',
+                active=True,
+                config={'send_email': True}
+            )
+            self.stdout.write(self.style.SUCCESS(f'✓ Created rule: {disk_rule_name}'))
+        else:
+            self.stdout.write(self.style.WARNING(f'Rule already exists: {disk_rule_name}'))
+
+        # Create RAM usage alert rule
+        ram_rule_name = "Host RAM usage over 70%"
+        if not AlertRule.objects.filter(name=ram_rule_name, rule_type='custom').exists():
+            AlertRule.objects.create(
+                name=ram_rule_name,
+                rule_type='custom',
+                description='Alert if host RAM usage exceeds 70%',
+                threshold=70,
+                check_interval_minutes=60,
+                notification_type='email',
+                notification_recipients=email,
+                notification_subject='Alert: Host RAM usage over 70%',
+                active=True,
+                config={'check_type': 'ram', 'send_email': True}
+            )
+            self.stdout.write(self.style.SUCCESS(f'✓ Created rule: {ram_rule_name}'))
+        else:
+            self.stdout.write(self.style.WARNING(f'Rule already exists: {ram_rule_name}'))
+
         self.stdout.write(
             self.style.SUCCESS(f'\n✓ Successfully created {created_count} alert rules')
         )

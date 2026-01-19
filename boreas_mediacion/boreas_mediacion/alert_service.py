@@ -9,11 +9,58 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
+import psutil
 from django.conf import settings
 from django.utils import timezone
-from .models import AlertRule, Alert, AlertNotification
+from .models import AlertRule, Alert
 
 
+class AlertService:
+    """Service for managing alerts and notifications"""
+
+    def check_ram_usage_rule(self, rule: AlertRule) -> Optional['Alert']:
+        """
+        Check RAM usage against rule threshold using psutil
+        Args:
+            rule: AlertRule with custom type and check_type 'ram'
+        Returns:
+            Alert if threshold exceeded, None otherwise
+        """
+        threshold = rule.threshold or 70
+        mem = psutil.virtual_memory()
+        usage_percent = mem.percent
+        if usage_percent >= threshold:
+            message = f"""
+El uso de RAM supera el {threshold}%
+Usado: {usage_percent:.1f}%
+            """.strip()
+            existing_active = Alert.objects.filter(
+                rule=rule,
+                alert_type='ram_usage',
+                status='active'
+            ).first()
+            if existing_active:
+                existing_active.details['last_check'] = timezone.now().isoformat()
+                existing_active.details['usage_percent'] = usage_percent
+                existing_active.save()
+                return None
+            return self.create_alert(
+                rule=rule,
+                alert_type='ram_usage',
+                message=message,
+                severity='critical' if usage_percent >= 90 else 'warning',
+                details={
+                    'usage_percent': usage_percent,
+                    'threshold': threshold
+                }
+            )
+        # Resolve any active alerts if usage is below threshold
+        Alert.objects.filter(
+            rule=rule,
+            alert_type='ram_usage',
+            status='active'
+        ).update(status='resolved', resolved_at=timezone.now())
+        return None
 class AlertService:
     """Service for managing alerts and notifications"""
     
@@ -89,26 +136,26 @@ class AlertService:
         
         return alert
     
-    def send_alert_notification(self, alert: Alert, rule: AlertRule) -> AlertNotification:
+    def send_alert_notification(self, alert: Alert, rule: AlertRule):
         """
         Send notification for an alert based on rule configuration
         
         Args:
             alert: Alert instance
             rule: AlertRule with notification settings
-            
-        Returns:
-            Created AlertNotification instance
         """
         subject = rule.notification_subject or f"[boreas] {alert.alert_type} Alert"
         
-        notification = AlertNotification.objects.create(
-            alert=alert,
-            notification_type=rule.notification_type,
-            recipients=rule.notification_recipients,
-            subject=subject,
-            message=alert.message
-        )
+        # Send based on notification type
+        if rule.notification_type == 'email':
+            result = self.send_email_notification(
+                recipients=rule.notification_recipients,
+                subject=subject,
+                message=alert.message
+            )
+            # Log or handle result as needed
+        # (Other notification types can be added here)
+        return None
         
         # Send based on notification type
         if rule.notification_type == 'email':
@@ -137,9 +184,11 @@ class AlertService:
         Args:
             rule: AlertRule to check
             
-        Returns:
+                print(f"[EMAIL SENT] To: {recipient_list} | Subject: {subject}")
+                return {'success': True, 'error': None}
             Alert if rule is configured to trigger, None otherwise
         """
+        # Removed stray print statement causing IndentationError
         config = rule.config or {}
         
         # Check if rule is configured to trigger automatically
@@ -172,11 +221,11 @@ class AlertService:
         
         return None
     
-    def check_active_rules(self) -> List[Alert]:
+    def check_active_rules(self) -> List['Alert']:
         """
         Check all active alert rules and trigger alerts if needed
         
-        Returns:
+                    print(f"[EMAIL ERROR] To: {recipients} | Subject: {subject} | Error: {e}")
             List of triggered alerts
         """
         alerts = []
@@ -189,11 +238,13 @@ class AlertService:
                 if timezone.now() < next_check:
                     continue
             
-            # Check based on rule type
+            # Check based on rule type and config
             if rule.rule_type == 'disk_space':
                 alert = self.check_disk_space_rule(rule)
             elif rule.rule_type == 'device_connection':
                 alert = self.check_device_connection_rule(rule)
+            elif rule.rule_type == 'custom' and rule.config and rule.config.get('check_type') == 'ram':
+                alert = self.check_ram_usage_rule(rule)
             else:
                 # Generic fallback for any other rule type
                 alert = self.check_generic_rule(rule)
@@ -213,27 +264,13 @@ class DiskSpaceAlertService(AlertService):
     
     def get_disk_usage_percent(self) -> Optional[int]:
         """
-        Get disk usage percentage using df command
-        
+        Get disk usage percentage using psutil
         Returns:
             Disk usage percentage (0-100) or None if error
         """
         try:
-            # Run df command (works on Linux/Unix)
-            cmd = "df -t ext4 --output=pcent | sed '2!d' | tr -d ' %\\n'"
-            result = subprocess.run(
-                cmd,
-                shell=True,
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            
-            if result.returncode == 0:
-                return int(result.stdout.strip())
-            
-            return None
-        
+            usage = psutil.disk_usage('/')
+            return int(usage.percent)
         except Exception as e:
             print(f"Error getting disk usage: {e}")
             return None

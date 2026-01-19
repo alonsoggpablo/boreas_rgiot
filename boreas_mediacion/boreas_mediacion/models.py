@@ -438,38 +438,6 @@ class Alert(models.Model):
         return f"[{self.severity.upper()}] {self.alert_type} - {self.triggered_at.strftime('%Y-%m-%d %H:%M')}"
 
 
-class AlertNotification(models.Model):
-    """Registro de notificaciones enviadas para alertas"""
-    
-    NOTIFICATION_STATUS = [
-        ('pending', 'Pending'),
-        ('sent', 'Sent'),
-        ('failed', 'Failed'),
-    ]
-    
-    alert = models.ForeignKey(Alert, on_delete=models.CASCADE, related_name='notifications')
-    
-    # Detalles de la notificación
-    notification_type = models.CharField(max_length=200, default='')
-    recipients = models.TextField(default='')
-    subject = models.CharField(max_length=500, blank=True, null=True, default='')
-    message = models.TextField(default='')
-    
-    # Estado
-    status = models.CharField(max_length=20, choices=NOTIFICATION_STATUS, default='pending')
-    error_message = models.TextField(blank=True, null=True)
-    
-    # Timestamps
-    created_at = models.DateTimeField(default=timezone.now)
-    sent_at = models.DateTimeField(blank=True, null=True)
-    
-    class Meta:
-        ordering = ['-created_at']
-        verbose_name = "Alert Notification"
-        verbose_name_plural = "Alert Notifications"
-    
-    def __str__(self):
-        return f"{self.notification_type} to {self.recipients[:50]} - {self.status}"
 
 
 class TopicMessageTimeout(models.Model):

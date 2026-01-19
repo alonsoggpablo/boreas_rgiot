@@ -17,8 +17,11 @@ def read_wireless_api():
     from boreas_mediacion.wirelesslogic_service import WirelessLogicService
     service = WirelessLogicService()
     # Implement the actual API read logic here
-    service.sync_all_sims()  # Example method, adjust as needed
-    print("WirelessLogic API read completed.")
+    created, updated = service.sync_all_sims()
+    print(f"WirelessLogic SIMs - created: {created}, updated: {updated}")
+    usage_count = service.sync_sim_usage()
+    print(f"WirelessLogic usage records created/updated: {usage_count}")
+    print("WirelessLogic API read and DB save completed.")
 
 default_args = {
     'owner': 'boreas',

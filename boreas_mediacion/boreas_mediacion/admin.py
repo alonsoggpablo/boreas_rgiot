@@ -5,7 +5,7 @@ from django.http import HttpResponseRedirect
 from django.utils import timezone
 from .models import mqtt_msg, MQTT_device_family, MQTT_broker, MQTT_feed, sensor_command, sensor_actuacion, router_get, \
     router_parameter, reported_measure, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, \
-    DatadisCredentials, DatadisSupply, DatadisConsumption, DatadisMaxPower, AlertRule, Alert, AlertNotification, \
+    DatadisCredentials, DatadisSupply, DatadisConsumption, DatadisMaxPower, AlertRule, Alert, \
     SystemConfiguration
 from .models import MQTT_topic
 from . import mqtt as mqtt_module
@@ -792,52 +792,6 @@ class AlertAdmin(admin.ModelAdmin):
     resolve_alerts.short_description = "✓ Resolve alerts"
 
 
-@admin.register(AlertNotification)
-class AlertNotificationAdmin(admin.ModelAdmin):
-    list_display = ('notification_type', 'status_badge', 'recipients_short', 'alert_link', 
-                   'created_at', 'sent_at')
-    list_filter = ('notification_type', 'status', 'created_at')
-    search_fields = ('recipients', 'subject', 'message')
-    readonly_fields = ('created_at', 'sent_at', 'alert')
-    date_hierarchy = 'created_at'
-    
-    fieldsets = (
-        ('Notification Details', {
-            'fields': ('alert', 'notification_type', 'recipients', 'subject', 'message')
-        }),
-        ('Status', {
-            'fields': ('status', 'error_message')
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'sent_at')
-        }),
-    )
-    
-    def status_badge(self, obj):
-        """Mostrar estado con color"""
-        colors = {
-            'pending': 'orange',
-            'sent': 'green',
-            'failed': 'red'
-        }
-        color = colors.get(obj.status, 'gray')
-        return format_html(
-            '<span style="color: {}; font-weight: bold;">{}</span>',
-            color,
-            obj.status.upper()
-        )
-    status_badge.short_description = 'Status'
-    
-    def recipients_short(self, obj):
-        """Mostrar destinatarios de forma corta"""
-        return obj.recipients[:50] + ('...' if len(obj.recipients) > 50 else '')
-    recipients_short.short_description = 'Recipients'
-    
-    def alert_link(self, obj):
-        """Link a la alerta"""
-        url = reverse('admin:boreas_mediacion_alert_change', args=[obj.alert.id])
-        return format_html('<a href="{}">[{}] {}</a>', url, obj.alert.severity.upper(), obj.alert.alert_type)
-    alert_link.short_description = 'Alert'
 
 
 @admin.register(DatadisMaxPower)

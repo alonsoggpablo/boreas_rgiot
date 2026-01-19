@@ -18,7 +18,10 @@ def read_datadis_api():
     service = DatadisService()
     # Implement the actual API read logic here
     service.sync_supplies()  # Sync supply points from DATADIS API
-    print("DATADIS API read completed.")
+    print("DATADIS supply points sync completed.")
+    # Sync consumption and max power for all supplies
+    summary = service.sync_all_supplies_consumption()
+    print(f"DATADIS consumption/max power sync summary: {summary}")
 
 default_args = {
     'owner': 'boreas',
