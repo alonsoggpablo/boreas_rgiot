@@ -1,3 +1,112 @@
+# 🚀 Despliegue y Operaciones
+
+### Despliegue Completo (`full_deploy.sh`)
+
+El script `full_deploy.sh` realiza un despliegue limpio y completo del sistema:
+
+1. Descarga la última versión del código (`git pull`).
+2. Detiene y elimina todos los contenedores y volúmenes de datos.
+3. Elimina migraciones antiguas para un historial limpio.
+4. Reconstruye todos los contenedores (web, Airflow, base de datos, nginx).
+5. Inicia primero la base de datos, luego los servicios web y Airflow.
+6. Inicia el proxy nginx.
+
+**Uso:**
+```bash
+./full_deploy.sh
+```
+> ⚠️ Este script borra la base de datos y migraciones. Úsalo solo para despliegues limpios o entornos de desarrollo.
+
+---
+
+### Recargar Airflow (`reload_airflow.sh`)
+
+El script `reload_airflow.sh` reinicia los servicios de Airflow (webserver y scheduler) para aplicar cambios en los DAGs o configuración.
+
+**Uso:**
+```bash
+./reload_airflow.sh
+```
+- Reinicia los contenedores `airflow-webserver` y `airflow-scheduler`.
+- Útil tras modificar DAGs o variables de entorno relacionadas con Airflow.
+
+---
+
+### Actualización de la Aplicación (`update_deployment.sh`)
+
+El script `update_deployment.sh` actualiza el sistema sin borrar la base de datos:
+
+1. Descarga los últimos cambios (`git pull`).
+2. Detiene los contenedores.
+3. Reconstruye el contenedor web.
+4. Inicia la base de datos y espera a que esté lista.
+5. Recoge archivos estáticos (`collectstatic`).
+6. Inicia los servicios web y nginx.
+
+**Uso:**
+```bash
+./update_deployment.sh
+```
+- No borra datos ni migraciones.
+- Ideal para actualizaciones en producción.
+
+---
+
+## 🗂️ Estructura de la Aplicación
+
+```
+boreas_rgiot/
+├── boreas_mediacion/           # App Django principal (modelos, vistas, admin, lógica de negocio)
+│   ├── boreas_mediacion/       # Código fuente Django (models, admin, services)
+│   ├── management/             # Comandos personalizados Django
+│   ├── fixtures/               # Datos iniciales (JSON)
+│   ├── static/                 # Archivos estáticos (CSS, JS)
+│   ├── templates/              # Plantillas HTML
+│   └── ...
+├── airflow/                    # Orquestación de tareas (Apache Airflow)
+│   ├── dags/                   # DAGs de Airflow (automatización)
+│   ├── logs/                   # Logs de ejecución de DAGs
+│   └── plugins/                # Plugins personalizados
+├── scripts/                    # Scripts de despliegue y utilidades
+├── requirements.txt            # Dependencias Python
+├── docker-compose.yml          # Servicios principales (web, db, nginx)
+├── docker-compose.airflow.yml  # Servicios Airflow
+├── full_deploy.sh              # Despliegue completo
+├── update_deployment.sh        # Actualización
+├── reload_airflow.sh           # Recarga Airflow
+└── ...
+```
+
+---
+
+## ⚙️ Lógica de la Aplicación
+
+- **MQTT:** Recepción y almacenamiento de mensajes de dispositivos IoT.
+- **API REST:** Consulta y gestión de datos históricos, configuración y comandos.
+- **Alertas:** Reglas configurables para notificaciones automáticas.
+- **Integraciones:** WirelessLogic (SIMs), DATADIS (consumo eléctrico), Sigfox (sensores).
+- **Panel Admin:** Gestión avanzada de modelos y acciones personalizadas.
+
+---
+
+## ⏰ Automatización con Airflow (DAGs)
+
+Los DAGs de Airflow automatizan tareas clave:
+
+- `aemet_monitor.py`: Monitorea datos meteorológicos AEMET, envía alertas si faltan datos.
+- `boreas_alerts.py`: Ejecuta reglas de alertas (conexión, espacio en disco, etc.).
+- `datadis_api_read.py`: Sincroniza puntos de suministro desde la API DATADIS a la base de datos.
+- Otros DAGs pueden incluir integración con Sigfox, WirelessLogic, etc.
+
+**Ubicación:**  
+`airflow/dags/`
+
+**Recarga de DAGs:**  
+Tras modificar un DAG, ejecutar:
+```bash
+./reload_airflow.sh
+```
+y verificar en la UI de Airflow (http://localhost:8080).
 # BOREAS RGIOT - Documentación del Proyecto
 
 ## 📋 Descripción General

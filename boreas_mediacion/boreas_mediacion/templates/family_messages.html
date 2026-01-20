@@ -1,3 +1,4 @@
+{% load tz %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -187,6 +188,7 @@
 
         <div class="content">
             {% if family_data %}
+                <h2>MQTT Reads</h2>
                 <div class="table-wrapper">
                     <table>
                         <thead>
@@ -207,33 +209,39 @@
                         </thead>
                         <tbody>
                             {% for item in family_data %}
+                                {% if item.source == 'mqtt' %}
                                 <tr>
-                                    <td>
-                                        <span class="family-name">
-                                            {% if item.source == 'mqtt' %}
-                                                {{ item.family.name }}
-                                            {% else %}
-                                                {{ item.family_name }}
-                                            {% endif %}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="device-id">{{ item.device_id }}</span>
-                                    </td>
-                                    <td>
-                                        <span class="time">
-                                            {% if item.report_time %}
-                                                {{ item.report_time|date:"Y-m-d H:i:s" }}
-                                            {% else %}
-                                                N/A
-                                            {% endif %}
-                                        </span>
-                                    </td>
+                                    <td><span class="family-name">{{ item.family.name }}</span></td>
+                                    <td><span class="device-id">{{ item.device_id }}</span></td>
+                                    <td><span class="time">{% if item.report_time %}{% timezone "Europe/Madrid" %}{{ item.report_time|date:"Y-m-d H:i:s" }}{% endtimezone %}{% else %}N/A{% endif %}</span></td>
+                                    <td><div class="measures">{{ item.measures|safe }}</div></td>
+                                </tr>
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <h2 style="margin-top:40px;">API Reads</h2>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Fuente</th>
+                                <th>ID de Dispositivo</th>
+                                <th>Hora de Reporte</th>
+                                <th>Medidas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in family_data %}
+                                {% if item.source != 'mqtt' %}
+                                <tr>
+                                    <td><span class="family-name">{{ item.family_name }}</span></td>
+                                    <td><span class="device-id">{{ item.device_id }}</span></td>
+                                    <td><span class="time">{% if item.report_time %}{% timezone "Europe/Madrid" %}{{ item.report_time|date:"Y-m-d H:i:s" }}{% endtimezone %}{% else %}N/A{% endif %}</span></td>
                                     <td>
                                         <div class="measures">
-                                            {% if item.source == 'mqtt' %}
-                                                {{ item.measures|safe }}
-                                            {% elif item.source == 'sigfox' %}
+                                            {% if item.source == 'sigfox' %}
                                                 CO2: {{ item.measures.co2|default:"N/A" }} | Temp: {{ item.measures.temp|default:"N/A" }}°C | Hum: {{ item.measures.hum|default:"N/A" }}%
                                             {% elif item.source == 'datadis_consumption' %}
                                                 Consumo: {{ item.measures.consumption_kwh|default:"N/A" }} kWh | Método: {{ item.measures.obtained_method|default:"N/A" }}
@@ -241,12 +249,15 @@
                                                 Potencia Máx: {{ item.measures.max_power_kw|default:"N/A" }} kW
                                             {% elif item.source == 'wirelesslogic' %}
                                                 Status: {{ item.measures.status|default:"N/A" }} | Network: {{ item.measures.network|default:"N/A" }} | Tariff: {{ item.measures.tariff|default:"N/A" }} | Data: {{ item.measures.data_used_mb|default:"N/A" }} MB | Cost: {{ item.measures.total_cost|default:"N/A" }}
+                                            {% elif item.source == 'datadis_supply' %}
+                                                Dirección: {{ item.measures.address|default:"N/A" }} | Distribuidor: {{ item.measures.distributor|default:"N/A" }} | Tipo Punto: {{ item.measures.point_type|default:"N/A" }}
                                             {% else %}
                                                 {{ item.measures|safe }}
                                             {% endif %}
                                         </div>
                                     </td>
                                 </tr>
+                                {% endif %}
                             {% endfor %}
                         </tbody>
                     </table>

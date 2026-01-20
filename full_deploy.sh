@@ -74,6 +74,11 @@ docker compose exec web python boreas_mediacion/manage.py loaddata \
     boreas_mediacion/fixtures/05_router_parameters.json \
     boreas_mediacion/fixtures/06_datadis_credentials.json
 
+# Restore alert rules for MQTT device families and API sources
+echo "🔔 Restoring alert rules for MQTT device families and API sources..."
+docker compose exec web python boreas_mediacion/manage.py setup_family_alerts
+docker compose exec web python boreas_mediacion/manage.py setup_api_alerts
+
 # Create superuser (automated)
 echo "👤 Creating superuser (if not exists)..."
 docker compose exec web python /app/boreas_mediacion/manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); username='pablo'; password='boreas2026'; email='pablo@localhost';

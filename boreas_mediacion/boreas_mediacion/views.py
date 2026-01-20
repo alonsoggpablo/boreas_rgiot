@@ -13,7 +13,7 @@ from django.shortcuts import render
 from django.db.models import Max
 from django.views.generic import ListView
 
-from .models import mqtt_msg, reported_measure, MQTT_broker, MQTT_tx, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, MQTT_device_family, DatadisConsumption, DatadisMaxPower
+from .models import mqtt_msg, reported_measure, MQTT_broker, MQTT_tx, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, MQTT_device_family
 # from .mqtt import client as mqtt_client
 from .serializers import (mqtt_msgSerializer, reported_measureSerializer, MQTT_tx_serializer,
                           WirelessLogic_SIMSerializer, WirelessLogic_SIMListSerializer, 
@@ -303,6 +303,22 @@ class SigfoxCallbackView(APIView):
 # Web Views for Dashboard
 
 def family_last_messages(request):
+    family_data = []
+    # Add DatadisSupply last read (updated_at) for each active supply
+    from .models import DatadisSupply
+    latest_supply = DatadisSupply.objects.filter(active=True).order_by('-updated_at').first()
+    if latest_supply:
+        family_data.append({
+            'source': 'datadis_supply',
+            'family_name': 'DATADIS Supply',
+            'device_id': latest_supply.cups,
+            'report_time': latest_supply.updated_at,
+            'measures': {
+                'address': latest_supply.address,
+                'distributor': latest_supply.distributor,
+                'point_type': latest_supply.point_type,
+            },
+        })
     """
     View to display the last message received for each MQTT device family and API data.
     Supports filtering by family name and device_id.
@@ -310,8 +326,6 @@ def family_last_messages(request):
     """
     # Get all families with their last message
     families = MQTT_device_family.objects.all()
-    
-    family_data = []
     for family in families:
         # Get the last message for this family
         last_msg = mqtt_msg.objects.filter(device_family=family).order_by('-report_time').first()
@@ -343,41 +357,7 @@ def family_last_messages(request):
             },
         })
     
-    # Add DATADIS consumption data
-    latest_consumption = DatadisConsumption.objects.all().order_by('-date', '-time').first()
-    if latest_consumption:
-        # Convert date to datetime for consistent sorting
-        consumption_datetime = timezone.make_aware(
-            datetime.combine(latest_consumption.date, datetime.min.time())
-        ) if isinstance(latest_consumption.date, date) else latest_consumption.date
-        family_data.append({
-            'source': 'datadis_consumption',
-            'family_name': 'DATADIS',
-            'device_id': latest_consumption.supply.cups if latest_consumption.supply else 'N/A',
-            'report_time': consumption_datetime,
-            'measures': {
-                'consumption_kwh': latest_consumption.consumption_kwh,
-                'measurement_type': latest_consumption.measurement_type,
-                'obtained_method': latest_consumption.obtained_method,
-            },
-        })
-    
-    # Add DATADIS max power data
-    latest_max_power = DatadisMaxPower.objects.all().order_by('-date', '-time').first()
-    if latest_max_power:
-        # Convert date to datetime for consistent sorting
-        power_datetime = timezone.make_aware(
-            datetime.combine(latest_max_power.date, datetime.min.time())
-        ) if isinstance(latest_max_power.date, date) else latest_max_power.date
-        family_data.append({
-            'source': 'datadis_power',
-            'family_name': 'DATADIS (Power)',
-            'device_id': latest_max_power.supply.cups if latest_max_power.supply else 'N/A',
-            'report_time': power_datetime,
-            'measures': {
-                'max_power_kw': latest_max_power.max_power_kw,
-            },
-        })
+    # ...existing code...
     
     # Add latest WirelessLogic SIM data (only the most recent)
     latest_sim = WirelessLogic_SIM.objects.order_by('-last_sync').first()

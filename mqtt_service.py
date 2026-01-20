@@ -231,7 +231,7 @@ def initialize_mqtt():
         # Set credentials
         mqtt_client.username_pw_set(mqtt_user, mqtt_password)
         
-        # Enable TLS
+        # Enable TLS for port 8883
         mqtt_client.tls_set(
             certfile=None,
             keyfile=None,
@@ -243,7 +243,7 @@ def initialize_mqtt():
         # Connect to broker
         mqtt_client.connect(
             host=mqtt_server,
-            port=mqtt_port,
+            port=mqtt_port,  # Use port from DB (should be 8883)
             keepalive=mqtt_keepalive
         )
         

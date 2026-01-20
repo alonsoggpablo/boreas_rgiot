@@ -5,7 +5,7 @@ Servicio para interactuar con la API de DATADIS (datos de consumo eléctrico)
 import requests
 from datetime import datetime, timedelta, date
 from django.utils import timezone
-from .models import DatadisCredentials, DatadisSupply, DatadisConsumption, DatadisMaxPower
+from .models import DatadisCredentials, DatadisSupply
 
 
 class DatadisService:
@@ -107,23 +107,34 @@ class DatadisService:
                 return response.json()
             raise
     
-    def get_supplies(self):
+    def get_supplies(self, authorized_nif=None, distributor_code=None):
         """
         Obtener lista de puntos de suministro (CUPS)
         
+        Args:
+            authorized_nif (str, optional): NIF autorizado para buscar suministros
+            distributor_code (str, optional): Código de distribuidora
         Returns:
             list: Lista de diccionarios con datos de suministros
         """
-        return self._make_request('get-supplies')
+        params = {}
+        if authorized_nif:
+            params['authorizedNif'] = authorized_nif
+        if distributor_code:
+            params['distributorCode'] = distributor_code
+        return self._make_request('get-supplies', params if params else None)
     
-    def sync_supplies(self):
+    def sync_supplies(self, authorized_nif=None, distributor_code=None):
         """
         Sincronizar puntos de suministro desde la API a la base de datos
         
+        Args:
+            authorized_nif (str, optional): NIF autorizado para buscar suministros
+            distributor_code (str, optional): Código de distribuidora
         Returns:
             tuple: (creados, actualizados)
         """
-        supplies_data = self.get_supplies()
+        supplies_data = self.get_supplies(authorized_nif=authorized_nif, distributor_code=distributor_code)
         created_count = 0
         updated_count = 0
         
@@ -174,157 +185,6 @@ class DatadisService:
         
         return created_count, updated_count
     
-    def get_consumption_data(self, cups, distributor_code, point_type, start_date=None, end_date=None, measurement_type='0'):
-        """
-        Obtener datos de consumo para un CUPS
-        
-        Args:
-            cups: Código CUPS
-            distributor_code: Código de distribuidora
-            point_type: Tipo de punto (1-5)
-            start_date: Fecha inicio (YYYY/MM format) - default: mes actual
-            end_date: Fecha fin (YYYY/MM format) - default: mes actual
-            measurement_type: '0' horario, '1' cuartohorario
-        
-        Returns:
-            list: Datos de consumo
-        """
-        # Calcular fechas por defecto
-        today = date.today()
-        if today.day == 1:
-            # Si es día 1, obtener datos del mes anterior
-            today = today - timedelta(days=1)
-        
-        if start_date is None:
-            start_date = today.strftime('%Y/%m')
-        if end_date is None:
-            end_date = today.strftime('%Y/%m')
-        
-        params = {
-            'cups': cups,
-            'distributorCode': distributor_code,
-            'startDate': start_date,
-            'endDate': end_date,
-            'measurementType': measurement_type,
-            'pointType': point_type
-        }
-        
-        return self._make_request('get-consumption-data', params)
-    
-    def sync_consumption_data(self, supply, start_date=None, end_date=None):
-        """
-        Sincronizar datos de consumo para un supply
-        
-        Args:
-            supply: Objeto DatadisSupply
-            start_date: Fecha inicio (YYYY/MM) - default: mes actual
-            end_date: Fecha fin (YYYY/MM) - default: mes actual
-        
-        Returns:
-            int: Número de registros creados/actualizados
-        """
-        consumption_data = self.get_consumption_data(
-            cups=supply.cups,
-            distributor_code=supply.distributor_code,
-            point_type=supply.point_type,
-            start_date=start_date,
-            end_date=end_date
-        )
-        
-        count = 0
-        for record in consumption_data:
-            # Parsear fecha
-            try:
-                record_date = datetime.strptime(record.get('date'), '%Y/%m/%d').date()
-            except:
-                continue
-            
-            # Crear o actualizar registro
-            DatadisConsumption.objects.update_or_create(
-                supply=supply,
-                date=record_date,
-                time=record.get('time', ''),
-                defaults={
-                    'consumption_kwh': record.get('consumptionKWh'),
-                    'obtained_method': record.get('obtainMethod'),
-                    'measurement_type': '0',  # Horario por defecto
-                    'raw_data': record
-                }
-            )
-            count += 1
-        
-        return count
-    
-    def get_max_power(self, cups, distributor_code, start_date=None, end_date=None):
-        """
-        Obtener datos de potencia máxima
-        
-        Args:
-            cups: Código CUPS
-            distributor_code: Código de distribuidora
-            start_date: Fecha inicio (YYYY/MM)
-            end_date: Fecha fin (YYYY/MM)
-        
-        Returns:
-            list: Datos de potencia máxima
-        """
-        # Calcular fechas por defecto (mes anterior a actual)
-        today = date.today()
-        if end_date is None:
-            end_date = today.strftime('%Y/%m')
-        if start_date is None:
-            last_month = today.replace(day=1) - timedelta(days=1)
-            start_date = last_month.strftime('%Y/%m')
-        
-        params = {
-            'cups': cups,
-            'distributorCode': distributor_code,
-            'startDate': start_date,
-            'endDate': end_date
-        }
-        
-        return self._make_request('get-max-power', params)
-    
-    def sync_max_power(self, supply, start_date=None, end_date=None):
-        """
-        Sincronizar datos de potencia máxima
-        
-        Args:
-            supply: Objeto DatadisSupply
-            start_date: Fecha inicio (YYYY/MM)
-            end_date: Fecha fin (YYYY/MM)
-        
-        Returns:
-            int: Número de registros creados/actualizados
-        """
-        max_power_data = self.get_max_power(
-            cups=supply.cups,
-            distributor_code=supply.distributor_code,
-            start_date=start_date,
-            end_date=end_date
-        )
-        
-        count = 0
-        for record in max_power_data:
-            # Parsear fecha
-            try:
-                record_date = datetime.strptime(record.get('date'), '%Y/%m/%d').date()
-            except:
-                continue
-            
-            # Crear o actualizar registro
-            DatadisMaxPower.objects.update_or_create(
-                supply=supply,
-                date=record_date,
-                time=record.get('time', ''),
-                defaults={
-                    'max_power_kw': record.get('maxPower'),
-                    'raw_data': record
-                }
-            )
-            count += 1
-        
-        return count
     
     def sync_all_supplies_consumption(self, start_date=None, end_date=None):
         """

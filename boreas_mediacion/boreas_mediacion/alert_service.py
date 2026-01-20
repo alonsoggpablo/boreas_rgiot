@@ -15,8 +15,122 @@ from django.utils import timezone
 from .models import AlertRule, Alert
 
 
-class AlertService:
-    """Service for managing alerts and notifications"""
+class DiskSpaceAlertService:
+    """Service for disk space monitoring alerts"""
+
+    def get_disk_usage_percent(self) -> Optional[int]:
+        """
+        Get disk usage percentage using psutil
+        Returns:
+            Disk usage percentage (0-100) or None if error
+        """
+        try:
+            usage = psutil.disk_usage('/')
+            return int(usage.percent)
+        except Exception as e:
+            print(f"Error getting disk usage: {e}")
+            return None
+    
+    def check_disk_space_rule(self, rule: AlertRule) -> Optional['Alert']:
+        """
+        Check disk space against rule threshold
+        
+        Args:
+            rule: AlertRule with disk_space type
+            
+        Returns:
+            Alert if threshold exceeded, None otherwise
+        """
+        usage_percent = self.get_disk_usage_percent()
+        
+        if usage_percent is None:
+            return None
+        
+        threshold = rule.threshold or 89
+        
+        if usage_percent >= threshold:
+            message = f"El uso de disco supera el {threshold}%\nUsado: {usage_percent:.1f}%"
+            existing_active = Alert.objects.filter(
+                rule=rule,
+                alert_type='disk_space',
+                status='active'
+            ).first()
+            if existing_active:
+                existing_active.details['last_check'] = timezone.now().isoformat()
+                existing_active.details['usage_percent'] = usage_percent
+                existing_active.save()
+                return None
+            return self.create_alert(
+                rule=rule,
+                alert_type='disk_space',
+                message=message,
+                severity='critical' if usage_percent >= 95 else 'warning',
+                details={
+                    'usage_percent': usage_percent,
+                    'threshold': threshold
+                }
+            )
+        # Resolve any active alerts if usage is below threshold
+        Alert.objects.filter(
+            rule=rule,
+            alert_type='disk_space',
+            status='active'
+        ).update(status='resolved', resolved_at=timezone.now())
+        return None
+
+class AlertService(DiskSpaceAlertService):
+    def check_families_last_readings_rule(self, rule):
+        """
+        Always triggers a summary alert of last readings for each device family, and keeps it always active (never resolved).
+        """
+        from .models import MQTT_device_family, mqtt_msg
+        from django.utils import timezone
+        families = MQTT_device_family.objects.all()
+        summary_lines = []
+        for family in families:
+            last_msg = mqtt_msg.objects.filter(device_family=family).order_by('-report_time').first()
+            if last_msg:
+                last_time = last_msg.report_time.astimezone(timezone.get_current_timezone()).strftime('%Y-%m-%d %H:%M:%S')
+                summary_lines.append(f"{family.name}: última lectura {last_time}")
+            else:
+                summary_lines.append(f"{family.name}: sin lecturas")
+        message = "\n".join(summary_lines)
+        subject = rule.config.get('subject', 'Resumen de últimas lecturas por familia') if hasattr(rule, 'config') else 'Resumen de últimas lecturas por familia'
+        # Ensure only one active alert exists for this rule and type
+        active_alerts = Alert.objects.filter(
+            rule=rule,
+            alert_type='families_last_readings',
+            status='active'
+        )
+        if active_alerts.count() > 1:
+            # Resolve all but the most recent
+            to_keep = active_alerts.order_by('-triggered_at').first()
+            active_alerts.exclude(id=to_keep.id).update(status='resolved', resolved_at=timezone.now())
+            alert = to_keep
+            created = False
+        elif active_alerts.count() == 1:
+            alert = active_alerts.first()
+            created = False
+        else:
+            alert = Alert.objects.create(
+                rule=rule,
+                alert_type='families_last_readings',
+                message=message,
+                severity='info',
+                details={'summary': summary_lines},
+                status='active',
+            )
+            created = True
+        # Update alert content if needed
+        alert.message = message
+        alert.severity = 'info'
+        alert.details = {'summary': summary_lines}
+        alert.status = 'active'
+        alert.resolved_at = None
+        alert.save(update_fields=['message', 'severity', 'details', 'status', 'resolved_at'])
+        return alert
+
+    # Service for managing alerts and notifications
 
     def check_ram_usage_rule(self, rule: AlertRule) -> Optional['Alert']:
         """
@@ -61,15 +175,13 @@ Usado: {usage_percent:.1f}%
             status='active'
         ).update(status='resolved', resolved_at=timezone.now())
         return None
-class AlertService:
-    """Service for managing alerts and notifications"""
-    
+
     def __init__(self):
-        self.email_server = getattr(settings, 'ALERT_EMAIL_SERVER', 'mail.rggestionyenergia.com')
-        self.email_port = getattr(settings, 'ALERT_EMAIL_PORT', 587)
-        self.email_from = getattr(settings, 'ALERT_EMAIL_FROM', 'tecnico@rggestionyenergia.com')
-        self.email_username = getattr(settings, 'ALERT_EMAIL_USERNAME', self.email_from)
-        self.email_password = getattr(settings, 'ALERT_EMAIL_PASSWORD', '')
+        self.email_server = getattr(settings, 'EMAIL_HOST', 'mail.rggestionyenergia.com')
+        self.email_port = getattr(settings, 'EMAIL_PORT', 587)
+        self.email_from = getattr(settings, 'DEFAULT_FROM_EMAIL', 'alonsogpablo@rggestionyenergia.com')
+        self.email_username = getattr(settings, 'EMAIL_HOST_USER', self.email_from)
+        self.email_password = getattr(settings, 'EMAIL_HOST_PASSWORD', '')
     
     def send_email_notification(self, recipients: str, subject: str, message: str) -> Dict:
         """
@@ -101,10 +213,10 @@ class AlertService:
                 if self.email_password:
                     server.login(self.email_username, self.email_password)
                 server.send_message(msg)
-            
+            print(f"[EMAIL SENT] To: {recipient_list} | Subject: {subject}")
             return {'success': True, 'error': None}
-        
         except Exception as e:
+            print(f"[EMAIL FAILED] To: {recipients} | Subject: {subject} | Error: {e}")
             return {'success': False, 'error': str(e)}
     
     def create_alert(self, rule: Optional[AlertRule], alert_type: str, message: str,
@@ -156,25 +268,6 @@ class AlertService:
             # Log or handle result as needed
         # (Other notification types can be added here)
         return None
-        
-        # Send based on notification type
-        if rule.notification_type == 'email':
-            result = self.send_email_notification(
-                recipients=rule.notification_recipients,
-                subject=subject,
-                message=alert.message
-            )
-            
-            if result['success']:
-                notification.status = 'sent'
-                notification.sent_at = timezone.now()
-            else:
-                notification.status = 'failed'
-                notification.error_message = result['error']
-            
-            notification.save()
-        
-        return notification
     
     def check_generic_rule(self, rule: AlertRule) -> Optional[Alert]:
         """
@@ -183,12 +276,10 @@ class AlertService:
         
         Args:
             rule: AlertRule to check
-            
-                print(f"[EMAIL SENT] To: {recipient_list} | Subject: {subject}")
-                return {'success': True, 'error': None}
+
+        Returns:
             Alert if rule is configured to trigger, None otherwise
         """
-        # Removed stray print statement causing IndentationError
         config = rule.config or {}
         
         # Check if rule is configured to trigger automatically
@@ -222,46 +313,47 @@ class AlertService:
         return None
     
     def check_active_rules(self) -> List['Alert']:
-        """
-        Check all active alert rules and trigger alerts if needed
-        
-                    print(f"[EMAIL ERROR] To: {recipients} | Subject: {subject} | Error: {e}")
-            List of triggered alerts
-        """
+        print("[DEBUG] check_active_rules called")
+        from django.utils import timezone
+        from .models import Alert, AlertRule
+        # Clear all active alerts at the start of each run EXCEPT families_last_readings
+        Alert.objects.filter(status='active').exclude(alert_type='families_last_readings').update(status='resolved', resolved_at=timezone.now())
         alerts = []
         active_rules = AlertRule.objects.filter(active=True)
-        
+
         for rule in active_rules:
             # Check if it's time to run this rule
             if rule.last_check:
                 next_check = rule.last_check + timedelta(minutes=rule.check_interval_minutes)
                 if timezone.now() < next_check:
                     continue
-            
+
             # Check based on rule type and config
             if rule.rule_type == 'disk_space':
                 alert = self.check_disk_space_rule(rule)
             elif rule.rule_type == 'device_connection':
                 alert = self.check_device_connection_rule(rule)
+            elif rule.rule_type == 'families_last_readings':
+                alert = self.check_families_last_readings_rule(rule)
             elif rule.rule_type == 'custom' and rule.config and rule.config.get('check_type') == 'ram':
                 alert = self.check_ram_usage_rule(rule)
             else:
                 # Generic fallback for any other rule type
                 alert = self.check_generic_rule(rule)
-            
+
             # Update last check time
             rule.last_check = timezone.now()
             rule.save(update_fields=['last_check'])
-            
+
             if alert:
                 alerts.append(alert)
-        
+
         return alerts
 
 
 class DiskSpaceAlertService(AlertService):
     """Service for disk space monitoring alerts"""
-    
+
     def get_disk_usage_percent(self) -> Optional[int]:
         """
         Get disk usage percentage using psutil
@@ -363,6 +455,7 @@ class TopicTimeoutAlertService(AlertService):
         
         # Get last message for this family
         last_msg = mqtt_msg.objects.filter(device_family=family).order_by('-report_time').first()
+        print(f"[DEBUG] {family_name}: last_msg.report_time={getattr(last_msg, 'report_time', None)} | now={timezone.now()} | timeout_threshold={timezone.now() - timedelta(minutes=timeout_minutes)}")
         
         if not last_msg:
             # No messages ever received
@@ -371,7 +464,15 @@ class TopicTimeoutAlertService(AlertService):
         else:
             # Check timeout
             timeout_threshold = timezone.now() - timedelta(minutes=timeout_minutes)
-            if last_msg.report_time < timeout_threshold:
+            if last_msg.report_time >= timeout_threshold:
+                # Message received within timeout, resolve any active alerts and do NOT trigger
+                Alert.objects.filter(
+                    rule=rule,
+                    alert_type='topic_message_timeout',
+                    status='active'
+                ).update(status='resolved', resolved_at=timezone.now())
+                return None
+            else:
                 time_elapsed = (timezone.now() - last_msg.report_time).total_seconds() / 3600
                 message = (
                     f"No data received from family '{family_name}' for {time_elapsed:.1f} hours\n"
@@ -379,14 +480,11 @@ class TopicTimeoutAlertService(AlertService):
                     f"Device: {last_msg.device_id}"
                 )
                 severity = 'warning'
-            else:
-                # Still receiving messages within timeout
-                return None
         
         # Check if alert already exists and is still active
         existing_alert = Alert.objects.filter(
             rule=rule,
-            alert_type='topic_timeout',
+            alert_type='topic_message_timeout',
             status='active'
         ).first()
         
@@ -397,7 +495,7 @@ class TopicTimeoutAlertService(AlertService):
         # Create new alert
         alert = self.create_alert(
             rule=rule,
-            alert_type='topic_timeout',
+            alert_type='topic_message_timeout',
             message=message,
             severity=severity,
             details={

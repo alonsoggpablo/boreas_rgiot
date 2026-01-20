@@ -37,13 +37,46 @@ def read_sigfox_api():
         print(f"Response: {response.text}")
     except Exception as e:
         print(f"Error posting to Sigfox API: {e}")
-    # Confirm data saved
-    if SigfoxDevice.objects.filter(device_id=device_id).exists():
-        device = SigfoxDevice.objects.get(device_id=device_id)
-        readings = SigfoxReading.objects.filter(device=device)
-        print(f"Readings count: {readings.count()}")
-        for r in readings:
-            print(r.timestamp, r.temp, r.hum, r.co2, r.base, r.raw_data)
+
+    # Save to DB directly (in addition to API call)
+    try:
+        from django.utils import timezone
+        ts_dt = timezone.now()
+        if ts:
+            from datetime import datetime
+            import pytz
+            ts_dt = datetime.fromtimestamp(int(ts), tz=pytz.UTC)
+        fw = data_hex[0:1] if data_hex else None
+        temp = hum = co2 = base = None
+        try:
+            temp = round((int(data_hex[2:6], 16) / 10) - 40, 2)
+            hum = int(data_hex[6:8], 16)
+            co2 = int(data_hex[8:12], 16)
+            base = int(data_hex[12:14], 16)
+        except Exception:
+            pass
+        device, _ = SigfoxDevice.objects.get_or_create(device_id=device_id)
+        device.firmware = fw or device.firmware
+        device.last_seen = ts_dt
+        device.last_payload = payload
+        device.last_co2 = co2
+        device.last_temp = temp
+        device.last_hum = hum
+        device.last_base = base
+        device.save()
+        SigfoxReading.objects.create(
+            device=device,
+            timestamp=ts_dt,
+            firmware=fw,
+            co2=co2,
+            temp=temp,
+            hum=hum,
+            base=base,
+            raw_data=payload
+        )
+        print("SIGFOX API: Data saved to DB.")
+    except Exception as e:
+        print(f"SIGFOX API: Error saving to DB: {e}")
     print("SIGFOX API read and save completed.")
 
 default_args = {

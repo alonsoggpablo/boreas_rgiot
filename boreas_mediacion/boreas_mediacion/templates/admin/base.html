@@ -1,0 +1,26 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block sidebar %}
+  <div id="app-grouping-sidebar">
+    <h3>Grouped by Label</h3>
+    <ul>
+      {% regroup app_list by app_label as grouped_apps %}
+      {% for group in grouped_apps %}
+        <li>
+          <strong>{{ group.grouper }}</strong>
+          <ul>
+            {% for app in group.list %}
+              {% for model in app.models %}
+                <li>
+                  <a href="{{ model.admin_url }}">{{ model.name }}</a>
+                </li>
+              {% endfor %}
+            {% endfor %}
+          </ul>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {{ block.super }}
+{% endblock %}

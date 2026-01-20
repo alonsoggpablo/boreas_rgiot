@@ -1,11 +1,15 @@
+# ====================
+#   MQTT READS
+# ====================
 from django.contrib import admin, messages
 from django.urls import reverse
 from django.utils.html import format_html
 from django.http import HttpResponseRedirect
 from django.utils import timezone
+import logging
 from .models import mqtt_msg, MQTT_device_family, MQTT_broker, MQTT_feed, sensor_command, sensor_actuacion, router_get, \
     router_parameter, reported_measure, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, \
-    DatadisCredentials, DatadisSupply, DatadisConsumption, DatadisMaxPower, AlertRule, Alert, \
+    DatadisCredentials, DatadisSupply, AlertRule, Alert, \
     SystemConfiguration
 from .models import MQTT_topic
 from . import mqtt as mqtt_module
@@ -16,6 +20,8 @@ from django.urls import reverse
 from django.utils.html import format_html
 
 class MQTT_MSG_Admin(admin.ModelAdmin):
+    class Meta:
+        app_label = 'MQTT READS'
     list_display = ('device_id','device','measures','feed','device_family','report_time')
     list_filter = ('feed','report_time','device_id','device_family')
     search_fields = ('device_id','device','measures','report_time')
@@ -24,19 +30,21 @@ admin.site.register(mqtt_msg,MQTT_MSG_Admin)
 # Register your models here.
 #register MQTT_topic
 class MQTT_topic_Admin(admin.ModelAdmin):
+    class Meta:
+        app_label = 'MQTT READS'
     list_display = ('topic','active','ro_rw','description','family','broker')
     list_filter = ('active','ro_rw','family','broker')
     search_fields = ('topic','description','family','broker')
     actions = ['activate_topics', 'deactivate_topics']
     
     def activate_topics(self, request, queryset):
-        """Activate selected MQTT topics"""
+        # Activate selected MQTT topics
         updated = queryset.update(active=True)
         self.message_user(request, f'{updated} topic(s) activated successfully')
     activate_topics.short_description = "✓ Activate selected topics"
     
     def deactivate_topics(self, request, queryset):
-        """Deactivate selected MQTT topics"""
+        # Deactivate selected MQTT topics
         updated = queryset.update(active=False)
         self.message_user(request, f'{updated} topic(s) deactivated successfully')
     deactivate_topics.short_description = "✗ Deactivate selected topics"
@@ -44,90 +52,61 @@ class MQTT_topic_Admin(admin.ModelAdmin):
 admin.site.register(MQTT_topic,MQTT_topic_Admin)
 
 class MQTT_device_family_Admin(admin.ModelAdmin):
+    class Meta:
+        app_label = 'MQTT READS'
     list_display = ('name',)
     list_filter = ('name',)
     search_fields = ('name',)
 admin.site.register(MQTT_device_family,MQTT_device_family_Admin)
 
 class MQTT_broker_Admin(admin.ModelAdmin):
-    list_display = ('name','server','user','password','port','keepalive','description','active','mqtt_status_display')
+    class Meta:
+        app_label = 'MQTT READS'
+    list_display = ('name','server','user','password','port','keepalive','description','active')
     list_filter = ('active',)
     search_fields = ('name','server','description')
-    actions = ['start_mqtt', 'stop_mqtt']
-    
-    def mqtt_status_display(self, obj):
-        """Display current MQTT client status"""
-        status = mqtt_module.get_mqtt_status()
-        if status['running']:
-            color = 'green'
-            text = '● Running'
-        else:
-            color = 'red'
-            text = '● Stopped'
-        return format_html('<span style="color: {};">{}</span>', color, text)
-    mqtt_status_display.short_description = 'MQTT Status'
-    
-    def start_mqtt(self, request, queryset):
-        """Start MQTT client"""
-        try:
-            result = mqtt_module.start_mqtt_client()
-            if result['status'] == 'success':
-                self.message_user(request, result['message'], level='SUCCESS')
-            elif result['status'] == 'already_running':
-                self.message_user(request, result['message'], level='WARNING')
-            else:
-                self.message_user(request, result['message'], level='ERROR')
-        except Exception as e:
-            self.message_user(request, f'Error starting MQTT client: {str(e)}', level='ERROR')
-    start_mqtt.short_description = "▶ Start MQTT Client"
-    
-    def stop_mqtt(self, request, queryset):
-        """Stop MQTT client"""
-        try:
-            result = mqtt_module.stop_mqtt_client()
-            if result['status'] == 'success':
-                self.message_user(request, result['message'], level='SUCCESS')
-            elif result['status'] == 'already_stopped':
-                self.message_user(request, result['message'], level='WARNING')
-            else:
-                self.message_user(request, result['message'], level='ERROR')
-        except Exception as e:
-            self.message_user(request, f'Error stopping MQTT client: {str(e)}', level='ERROR')
-    stop_mqtt.short_description = "■ Stop MQTT Client"
+
 
 admin.site.register(MQTT_broker,MQTT_broker_Admin)
 
 
 #register MQTT_feed
 class MQTT_feed_Admin(admin.ModelAdmin):
-   list_display = ('name','description','topic','get_family')
-   list_filter = ('topic__family','name','description')
-   search_fields = ('name','description','topic__topic')
+    class Meta:
+        app_label = 'MQTT READS'
+    list_display = ('name','description','topic','get_family')
+    list_filter = ('topic__family','name','description')
+    search_fields = ('name','description','topic__topic')
    
-   def get_family(self, obj):
-       """Display the family of the feed's topic"""
-       if obj.topic and obj.topic.family:
-           return obj.topic.family.name
-       return '-'
-   get_family.short_description = 'Family'
+    def get_family(self, obj):
+        # Display the family of the feed's topic
+        if obj.topic and obj.topic.family:
+            return obj.topic.family.name
+        return '-'
+    get_family.short_description = 'Family'
 
 admin.site.register(MQTT_feed,MQTT_feed_Admin)
 
 #register sensor command
 class sensor_command_Admin(admin.ModelAdmin):
-   list_display = ('device_id','circuit','actuacion')
-   list_filter = ('device_id','circuit','actuacion')
-   search_fields = ('device_id','circuit','actuacion')
+    class Meta:
+        app_label = 'MQTT READS'
 
-   def formfield_for_foreignkey(self, db_field, request, **kwargs):
-       if db_field.name == 'device_id':
-           kwargs['queryset'] = mqtt_msg.objects.order_by('device_id').distinct('device_id')
-       return super().formfield_for_foreignkey(db_field, request, **kwargs)
+    list_display = ('device_id', 'circuit', 'actuacion')
+    list_filter = ('device_id', 'circuit', 'actuacion')
+    search_fields = ('device_id', 'circuit', 'actuacion')
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'device_id':
+            kwargs['queryset'] = mqtt_msg.objects.order_by('device_id').distinct('device_id')
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 admin.site.register(sensor_command,sensor_command_Admin)
 
 #register sensor actuacion
 class sensor_actuacion_Admin(admin.ModelAdmin):
+    class Meta:
+        app_label = 'MQTT READS'
     list_display = ('tipo','command','description')
     list_filter = ('tipo','command','description')
     search_fields = ('tipo','command','description')
@@ -135,6 +114,8 @@ admin.site.register(sensor_actuacion,sensor_actuacion_Admin)
 
 #register router_get
 class router_get_Admin(admin.ModelAdmin):
+    class Meta:
+        app_label = 'MQTT READS'
     list_display = ('device_id','parameter')
     list_filter = ('device_id','parameter')
     search_fields = ('device_id','parameter')
@@ -148,6 +129,8 @@ admin.site.register(router_get,router_get_Admin)
 
 #register router_parameter
 class router_parameter_Admin(admin.ModelAdmin):
+    class Meta:
+        app_label = 'MQTT READS'
     list_display = ('parameter','description')
     list_filter = ('parameter','description')
     search_fields = ('parameter','description')
@@ -155,15 +138,23 @@ admin.site.register(router_parameter,router_parameter_Admin)
 
 #register reported_measure
 class reported_measure_Admin(admin.ModelAdmin):
+    class Meta:
+        app_label = 'MQTT READS'
     list_display = ('feed','device_id','measures','report_time')
     list_filter = ('feed','report_time','device_id')
     search_fields = ('device_id','measures','report_time')
 admin.site.register(reported_measure,reported_measure_Admin)
 
+# ====================
+#   API READS
+# ====================
+
 
 # WirelessLogic Admin
 @admin.register(WirelessLogic_SIM)
 class WirelessLogic_SIM_Admin(admin.ModelAdmin):
+    class Meta:
+        app_label = 'API READS'
     list_display = ('iccid', 'msisdn', 'status', 'tariff_name', 'network', 'activation_date', 'updated_at')
     list_filter = ('status', 'network', 'tariff_name', 'activation_date')
     search_fields = ('iccid', 'msisdn', 'imsi', 'account_name')
@@ -187,7 +178,7 @@ class WirelessLogic_SIM_Admin(admin.ModelAdmin):
     )
     
     def sync_selected_sims(self, request, queryset):
-        """Sincronizar SIMs seleccionadas desde la API"""
+        # Sincronizar SIMs seleccionadas desde la API
         try:
             service = WirelessLogicService()
             iccids = list(queryset.values_list('iccid', flat=True))
@@ -213,7 +204,7 @@ class WirelessLogic_SIM_Admin(admin.ModelAdmin):
     sync_selected_sims.short_description = "⟳ Sincronizar SIMs seleccionadas"
     
     def sync_all_sims_action(self, request, queryset):
-        """Sincronizar todas las SIMs desde la API"""
+        # Sincronizar todas las SIMs desde la API
         try:
             service = WirelessLogicService()
             created, updated = service.sync_all_sims()
@@ -234,6 +225,8 @@ class WirelessLogic_SIM_Admin(admin.ModelAdmin):
 
 @admin.register(WirelessLogic_Usage)
 class WirelessLogic_Usage_Admin(admin.ModelAdmin):
+    class Meta:
+        app_label = 'API READS'
     list_display = (
         'sim_link',
         'sim_iccid',
@@ -245,7 +238,14 @@ class WirelessLogic_Usage_Admin(admin.ModelAdmin):
         'voice_minutes',
         'total_cost',
         'currency',
+        'last_read_time',
     )
+
+    def last_read_time(self, obj):
+        return obj.updated_at
+    last_read_time.short_description = 'Last Read Time'
+
+# (Other API reads admin classes and registrations follow...)
     list_filter = ('period_start', 'period_end', 'currency', 'sim__status')
     search_fields = ('sim__iccid', 'sim__msisdn')
     readonly_fields = ('created_at', 'updated_at')
@@ -272,12 +272,12 @@ class WirelessLogic_Usage_Admin(admin.ModelAdmin):
     )
     
     def get_queryset(self, request):
-        """Optimizar query con select_related"""
+        # Optimizar query con select_related
         qs = super().get_queryset(request)
         return qs.select_related('sim')
 
     def sim_link(self, obj):
-        """Enlaza a la ficha de la SIM"""
+        # Enlaza a la ficha de la SIM
         url = reverse('admin:boreas_mediacion_wirelesslogic_sim_change', args=[obj.sim.id])
         label = obj.sim.msisdn or obj.sim.iccid
         return format_html('<a href="{}">{}</a>', url, label)
@@ -285,13 +285,13 @@ class WirelessLogic_Usage_Admin(admin.ModelAdmin):
     sim_link.admin_order_field = 'sim__msisdn'
 
     def sim_iccid(self, obj):
-        """Muestra el ICCID de la SIM"""
+        # Muestra el ICCID de la SIM
         return obj.sim.iccid
     sim_iccid.short_description = 'ICCID'
     sim_iccid.admin_order_field = 'sim__iccid'
 
     def sync_usage_action(self, request, queryset):
-        """Sincronizar uso de todas las SIMs"""
+        # Sincronizar uso de todas las SIMs
         try:
             service = WirelessLogicService()
             created = service.sync_sim_usage()
@@ -312,7 +312,14 @@ class WirelessLogic_Usage_Admin(admin.ModelAdmin):
 # Sigfox admin
 @admin.register(SigfoxDevice)
 class SigfoxDeviceAdmin(admin.ModelAdmin):
-    list_display = ('device_id', 'firmware', 'last_seen', 'last_co2', 'last_temp', 'last_hum')
+    class Meta:
+        app_label = 'API READS'
+    list_display = ('device_id', 'firmware', 'last_seen', 'last_co2', 'last_temp', 'last_hum', 'last_read_time')
+
+    def last_read_time(self, obj):
+        latest = obj.readings.order_by('-timestamp').first()
+        return latest.timestamp if latest else None
+    last_read_time.short_description = 'Last Read Time'
     search_fields = ('device_id',)
     readonly_fields = ('created_at', 'updated_at')
     actions = ['create_test_reading', 'show_recent_readings']
@@ -322,7 +329,7 @@ class SigfoxDeviceAdmin(admin.ModelAdmin):
         return qs
 
     def _parse_payload(self, data_hex):
-        """Parses hex payload into metrics; mirrors Sigfox callback logic."""
+        # Parses hex payload into metrics; mirrors Sigfox callback logic.
         fw = data_hex[0:1] or None
         temp = hum = co2 = base = None
         try:
@@ -383,6 +390,8 @@ class SigfoxDeviceAdmin(admin.ModelAdmin):
 
 @admin.register(SigfoxReading)
 class SigfoxReadingAdmin(admin.ModelAdmin):
+    class Meta:
+        app_label = 'API READS'
     list_display = ('device_link', 'timestamp', 'co2', 'temp', 'hum', 'base')
     list_filter = ('timestamp',)
     search_fields = ('device__device_id',)
@@ -399,6 +408,8 @@ class SigfoxReadingAdmin(admin.ModelAdmin):
 # DATADIS Admin
 @admin.register(DatadisCredentials)
 class DatadisCredentialsAdmin(admin.ModelAdmin):
+    class Meta:
+        app_label = 'API READS'
     list_display = ('username', 'active', 'last_auth', 'last_sync', 'token_status')
     list_filter = ('active', 'last_auth')
     search_fields = ('username',)
@@ -423,7 +434,7 @@ class DatadisCredentialsAdmin(admin.ModelAdmin):
     )
     
     def token_status(self, obj):
-        """Mostrar estado del token"""
+        # Mostrar estado del token
         if not obj.auth_token:
             return format_html('<span style="color: gray;">● Sin token</span>')
         
@@ -434,7 +445,7 @@ class DatadisCredentialsAdmin(admin.ModelAdmin):
     token_status.short_description = 'Estado Token'
     
     def authenticate_action(self, request, queryset):
-        """Autenticar y obtener token"""
+        # Autenticar y obtener token
         for credentials in queryset:
             try:
                 service = DatadisService(credentials)
@@ -453,7 +464,7 @@ class DatadisCredentialsAdmin(admin.ModelAdmin):
     authenticate_action.short_description = "🔑 Autenticar y obtener token"
     
     def sync_supplies_action(self, request, queryset):
-        """Sincronizar puntos de suministro"""
+        # Sincronizar puntos de suministro
         for credentials in queryset:
             try:
                 service = DatadisService(credentials)
@@ -472,7 +483,7 @@ class DatadisCredentialsAdmin(admin.ModelAdmin):
     sync_supplies_action.short_description = "⟳ Sincronizar CUPS"
     
     def sync_consumption_action(self, request, queryset):
-        """Sincronizar consumo del mes actual"""
+        # Sincronizar consumo del mes actual
         for credentials in queryset:
             try:
                 service = DatadisService(credentials)
@@ -494,7 +505,14 @@ class DatadisCredentialsAdmin(admin.ModelAdmin):
 
 @admin.register(DatadisSupply)
 class DatadisSupplyAdmin(admin.ModelAdmin):
-    list_display = ('cups', 'address_short', 'province', 'distributor', 'point_type', 'active', 'consumption_count', 'last_consumption')
+    class Meta:
+        app_label = 'API READS'
+    list_display = ('cups', 'address_short', 'province', 'distributor', 'point_type', 'active', 'last_read_time')
+
+    def last_read_time(self, obj):
+        # Use updated_at as the last read time since consumption records are deleted
+        return obj.updated_at
+    last_read_time.short_description = 'Last Read Time'
     list_filter = ('active', 'province', 'distributor', 'point_type')
     search_fields = ('cups', 'address', 'postal_code', 'municipality')
     readonly_fields = ('created_at', 'updated_at', 'raw_data')
@@ -524,27 +542,15 @@ class DatadisSupplyAdmin(admin.ModelAdmin):
     )
     
     def address_short(self, obj):
-        """Dirección abreviada"""
+        # Dirección abreviada
         if obj.address and len(obj.address) > 50:
             return obj.address[:47] + '...'
         return obj.address or '-'
     address_short.short_description = 'Dirección'
     
-    def consumption_count(self, obj):
-        """Número de registros de consumo"""
-        return obj.consumption_records.count()
-    consumption_count.short_description = 'Registros'
-    
-    def last_consumption(self, obj):
-        """Última fecha de consumo"""
-        latest = obj.consumption_records.order_by('-date').first()
-        if latest:
-            return latest.date
-        return '-'
-    last_consumption.short_description = 'Último consumo'
     
     def sync_consumption_action(self, request, queryset):
-        """Sincronizar consumo del mes actual"""
+        # Sincronizar consumo del mes actual
         for supply in queryset:
             try:
                 service = DatadisService(supply.credentials)
@@ -563,7 +569,7 @@ class DatadisSupplyAdmin(admin.ModelAdmin):
     sync_consumption_action.short_description = "📊 Sincronizar consumo"
     
     def sync_max_power_action(self, request, queryset):
-        """Sincronizar potencia máxima"""
+        # Sincronizar potencia máxima
         for supply in queryset:
             try:
                 service = DatadisService(supply.credentials)
@@ -582,44 +588,34 @@ class DatadisSupplyAdmin(admin.ModelAdmin):
     sync_max_power_action.short_description = "⚡ Sincronizar potencia máxima"
     
     def activate_supplies(self, request, queryset):
-        """Activar supplies seleccionados"""
+        # Activar supplies seleccionados
         updated = queryset.update(active=True)
         self.message_user(request, f'{updated} CUPS activados')
     activate_supplies.short_description = "✓ Activar CUPS"
     
     def deactivate_supplies(self, request, queryset):
-        """Desactivar supplies seleccionados"""
+        # Desactivar supplies seleccionados
         updated = queryset.update(active=False)
         self.message_user(request, f'{updated} CUPS desactivados')
     deactivate_supplies.short_description = "✗ Desactivar CUPS"
 
 
-@admin.register(DatadisConsumption)
-class DatadisConsumptionAdmin(admin.ModelAdmin):
-    list_display = ('supply_cups', 'date', 'time', 'consumption_kwh', 'obtained_method')
-    list_filter = ('date', 'obtained_method', 'measurement_type')
-    search_fields = ('supply__cups',)
-    readonly_fields = ('created_at', 'updated_at', 'raw_data')
-    date_hierarchy = 'date'
-    
-    def supply_cups(self, obj):
-        """Link al CUPS"""
-        url = reverse('admin:boreas_mediacion_datadissupply_change', args=[obj.supply.id])
-        return format_html('<a href="{}">{}</a>', url, obj.supply.cups)
-    supply_cups.short_description = 'CUPS'
-    supply_cups.admin_order_field = 'supply__cups'
-
-
 # Alert System Admin
 @admin.register(AlertRule)
 class AlertRuleAdmin(admin.ModelAdmin):
-    list_display = ('name', 'rule_type', 'active_status', 'threshold', 'notification_recipients_short', 
+    class Meta:
+        app_label = 'ALERTS'
+    list_display = ('name', 'rule_type', 'get_rule_type_display', 'active_status', 'threshold', 'notification_recipients_short', 
                    'check_interval_minutes', 'last_check')
     list_filter = ('rule_type', 'active', 'notification_type')
     search_fields = ('name', 'description', 'notification_recipients')
     readonly_fields = ('created_at', 'updated_at', 'last_check')
     actions = ['activate_rules', 'deactivate_rules', 'check_now_action']
-    
+
+# ====================
+#   ALERTS
+# ====================
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('name', 'rule_type', 'description', 'active')
@@ -637,14 +633,14 @@ class AlertRuleAdmin(admin.ModelAdmin):
     )
     
     def active_status(self, obj):
-        """Mostrar estado activo con color"""
+        # Mostrar estado activo con color
         if obj.active:
             return format_html('<span style="color: green;">✓ Active</span>')
         return format_html('<span style="color: red;">✗ Inactive</span>')
     active_status.short_description = 'Status'
     
     def notification_recipients_short(self, obj):
-        """Mostrar destinatarios de forma corta"""
+        # Mostrar destinatarios de forma corta
         recipients = obj.notification_recipients[:50]
         if len(obj.notification_recipients) > 50:
             recipients += '...'
@@ -652,19 +648,19 @@ class AlertRuleAdmin(admin.ModelAdmin):
     notification_recipients_short.short_description = 'Recipients'
     
     def activate_rules(self, request, queryset):
-        """Activar reglas seleccionadas"""
+        # Activar reglas seleccionadas
         updated = queryset.update(active=True)
         self.message_user(request, f'{updated} rule(s) activated')
     activate_rules.short_description = "✓ Activate rules"
     
     def deactivate_rules(self, request, queryset):
-        """Desactivar reglas seleccionadas"""
+        # Desactivar reglas seleccionadas
         updated = queryset.update(active=False)
         self.message_user(request, f'{updated} rule(s) deactivated')
     deactivate_rules.short_description = "✗ Deactivate rules"
     
     def check_now_action(self, request, queryset):
-        """Ejecutar verificación inmediata de las reglas seleccionadas"""
+        # Ejecutar verificación inmediata de las reglas seleccionadas
         disk_service = DiskSpaceAlertService()
         device_service = DeviceConnectionAlertService()
         
@@ -712,6 +708,8 @@ class AlertRuleAdmin(admin.ModelAdmin):
 
 @admin.register(Alert)
 class AlertAdmin(admin.ModelAdmin):
+    class Meta:
+        app_label = 'ALERTS'
     list_display = ('severity_badge', 'alert_type', 'status_badge', 'message_short', 
                    'rule_link', 'triggered_at')
     list_filter = ('severity', 'status', 'alert_type', 'triggered_at')
@@ -728,9 +726,13 @@ class AlertAdmin(admin.ModelAdmin):
             'fields': ('triggered_at', 'acknowledged_at', 'resolved_at')
         }),
     )
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.filter(status='active')
     
     def severity_badge(self, obj):
-        """Mostrar severidad con color"""
+        # Mostrar severidad con color
         colors = {
             'info': 'blue',
             'warning': 'orange',
@@ -746,7 +748,7 @@ class AlertAdmin(admin.ModelAdmin):
     severity_badge.short_description = 'Severity'
     
     def status_badge(self, obj):
-        """Mostrar estado con color"""
+        # Mostrar estado con color
         colors = {
             'active': 'red',
             'acknowledged': 'orange',
@@ -761,12 +763,12 @@ class AlertAdmin(admin.ModelAdmin):
     status_badge.short_description = 'Status'
     
     def message_short(self, obj):
-        """Mostrar mensaje corto"""
+        # Mostrar mensaje corto
         return obj.message[:100] + ('...' if len(obj.message) > 100 else '')
     message_short.short_description = 'Message'
     
     def rule_link(self, obj):
-        """Link a la regla"""
+        # Link a la regla
         if obj.rule:
             url = reverse('admin:boreas_mediacion_alertrule_change', args=[obj.rule.id])
             return format_html('<a href="{}">{}</a>', url, obj.rule.name)
@@ -774,7 +776,7 @@ class AlertAdmin(admin.ModelAdmin):
     rule_link.short_description = 'Rule'
     
     def acknowledge_alerts(self, request, queryset):
-        """Marcar alertas como reconocidas"""
+        # Marcar alertas como reconocidas
         updated = queryset.filter(status='active').update(
             status='acknowledged',
             acknowledged_at=timezone.now()
@@ -783,7 +785,7 @@ class AlertAdmin(admin.ModelAdmin):
     acknowledge_alerts.short_description = "✓ Acknowledge alerts"
     
     def resolve_alerts(self, request, queryset):
-        """Marcar alertas como resueltas"""
+        # Marcar alertas como resueltas
         updated = queryset.exclude(status='resolved').update(
             status='resolved',
             resolved_at=timezone.now()
@@ -794,24 +796,11 @@ class AlertAdmin(admin.ModelAdmin):
 
 
 
-@admin.register(DatadisMaxPower)
-class DatadisMaxPowerAdmin(admin.ModelAdmin):
-    list_display = ('supply_cups', 'date', 'time', 'max_power_kw')
-    list_filter = ('date',)
-    search_fields = ('supply__cups',)
-    readonly_fields = ('created_at', 'updated_at', 'raw_data')
-    date_hierarchy = 'date'
-    
-    def supply_cups(self, obj):
-        """Link al CUPS"""
-        url = reverse('admin:boreas_mediacion_datadissupply_change', args=[obj.supply.id])
-        return format_html('<a href="{}">{}</a>', url, obj.supply.cups)
-    supply_cups.short_description = 'CUPS'
-    supply_cups.admin_order_field = 'supply__cups'
-
 
 @admin.register(SystemConfiguration)
 class SystemConfigurationAdmin(admin.ModelAdmin):
+    class Meta:
+        app_label = 'ALERTS'
     list_display = ('key', 'config_type', 'value_preview', 'active', 'updated_at')
     list_filter = ('config_type', 'active', 'updated_at')
     search_fields = ('key', 'value', 'description')
@@ -827,16 +816,15 @@ class SystemConfigurationAdmin(admin.ModelAdmin):
     )
     
     def value_preview(self, obj):
-        """Muestra vista previa del valor"""
+        # Muestra vista previa del valor
         if len(obj.value) > 100:
             return obj.value[:97] + '...'
         return obj.value
     value_preview.short_description = 'Value'
     
     def save_model(self, request, obj, form, change):
-        """Override para crear configuraciones iniciales si es necesario"""
+        # Override para crear configuraciones iniciales si es necesario
         super().save_model(request, obj, form, change)
-        
         # Mensaje de confirmación
         if change:
             self.message_user(request, f'Configuración "{obj.key}" actualizada correctamente.', messages.SUCCESS)

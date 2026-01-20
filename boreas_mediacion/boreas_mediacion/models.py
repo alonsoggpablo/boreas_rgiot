@@ -12,7 +12,12 @@ class MQTT_device_family(models.Model):
 
 
 class mqtt_msg(models.Model):
-    report_time=models.DateTimeField(auto_now=True)
+    report_time=models.DateTimeField(default=timezone.now)
+
+    def save(self, *args, **kwargs):
+        from django.utils import timezone
+        self.report_time = timezone.now()
+        super().save(*args, **kwargs)
     device=models.JSONField(default=dict)
     device_id=models.CharField(max_length=100, default='unknown')
     measures=models.JSONField(default=dict)
@@ -289,62 +294,6 @@ class DatadisSupply(models.Model):
         return f"{self.cups} ({self.address or 'Sin dirección'})"
 
 
-class DatadisConsumption(models.Model):
-    """Datos de consumo eléctrico"""
-    supply = models.ForeignKey(DatadisSupply, on_delete=models.CASCADE, related_name='consumption_records')
-    
-    # Período
-    date = models.DateField(db_index=True)
-    time = models.CharField(max_length=10, blank=True, null=True, help_text="Hora en formato HH:MM", default='')
-    
-    # Datos de consumo
-    consumption_kwh = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True, help_text="Consumo en kWh")
-    obtained_method = models.CharField(max_length=50, blank=True, null=True, help_text="Método de obtención")
-    
-    # Tipo de medida
-    measurement_type = models.CharField(max_length=10, default='0', help_text="0: horario, 1: cuartohorario")
-    
-    # Datos completos
-    raw_data = models.JSONField(default=dict, help_text="Datos completos del registro")
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        ordering = ['-date', '-time']
-        verbose_name = "DATADIS Consumption"
-        verbose_name_plural = "DATADIS Consumptions"
-        unique_together = [['supply', 'date', 'time']]
-    
-    def __str__(self):
-        return f"{self.supply.cups} - {self.date} {self.time or ''}: {self.consumption_kwh} kWh"
-
-
-class DatadisMaxPower(models.Model):
-    """Datos de potencia máxima demandada"""
-    supply = models.ForeignKey(DatadisSupply, on_delete=models.CASCADE, related_name='max_power_records')
-    
-    # Período
-    date = models.DateField(db_index=True)
-    time = models.CharField(max_length=10, blank=True, null=True, default='')
-    
-    # Datos de potencia
-    max_power_kw = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True, help_text="Potencia máxima en kW")
-    
-    # Datos completos
-    raw_data = models.JSONField(default=dict)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        ordering = ['-date', '-time']
-        verbose_name = "DATADIS Max Power"
-        verbose_name_plural = "DATADIS Max Powers"
-        unique_together = [['supply', 'date', 'time']]
-    
-    def __str__(self):
-        return f"{self.supply.cups} - {self.date}: {self.max_power_kw} kW"
 
 
 # Alert and Monitoring System Models
@@ -356,6 +305,7 @@ class AlertRule(models.Model):
         ('device_connection', 'Device Connection'),
         ('aemet_data', 'AEMET Weather Data'),
         ('topic_message_timeout', 'Topic Message Timeout'),
+        ('families_last_readings', 'Families Last Readings Summary'),
         ('custom', 'Custom Check'),
     ]
     

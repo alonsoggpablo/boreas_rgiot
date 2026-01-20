@@ -1,103 +1,13 @@
-import json
-import re
-import ssl
-import logging
-import paho.mqtt.client as mqtt
-import django
-import os
-
-import pytz
-
-logger = logging.getLogger(__name__)
-
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "boreas_mediacion.settings")
-from django.conf import settings
-# import psycopg2  # Comentado: usar Django ORM en lugar de conexión directa
-from datetime import datetime,timedelta
-from django.utils import timezone
-django.setup()
-from .models import mqtt_msg, reported_measure, MQTT_broker, MQTT_topic, MQTT_tx, MQTT_feed, sensor_command, router_get
-
-# Comentadas: conexión directa a psycopg2 no es necesaria con Django ORM
-# dbHost = settings.DATABASES['default']['HOST']
-# dbUsername = settings.DATABASES['default']['USER']
-# dbPassword = settings.DATABASES['default']['PASSWORD']
-# dbName= settings.DATABASES['default']['NAME']
-# dbPort= settings.DATABASES['default']['PORT']
-#
-# conn = psycopg2.connect(
-#    database=dbName, user=dbUsername , password=dbPassword , host=dbHost, port= dbPort
-# )
-# cursor = conn.cursor()
+"""
+Legacy MQTT management commands and signal handlers only.
+All persistent MQTT ingestion is handled by mqtt_service.py in the mqtt container.
+"""
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from .models import mqtt_msg, MQTT_tx, sensor_command, router_get
 
-class MQTT_msg_topic:
-    def __init__(self,topic):
-        self.topic=topic
-    def get_0(self):
-        try:
-            topic_0=self.topic.split("/")[0]
-        except:topic_0=''
-        return topic_0
-    def get_1(self):
-        try:
-            topic_1=self.topic.split("/")[1]
-        except:topic_1=''
-        return topic_1
-    def get_2(self):
-        try:
-            topic_2=self.topic.split("/")[2]
-        except:topic_2=''
-        return topic_2
-    def get_3(self):
-        try:
-            topic_3=self.topic.split("/")[3]
-        except:topic_3=''
-        return topic_3
-    def get_4(self):
-        try:
-            topic_4=self.topic.split("/")[4]
-        except:topic_4=''
-        return topic_4
-    def get_5(self):
-        try:
-            topic_5=self.topic.split("/")[5]
-        except:topic_5=''
-        return topic_5
-class MQTT_msg_payload:
-    def __init__(self,payload):
-        self.payload=payload
-    def get_0(self):
-        try:
-            payload_0=self.payload.split("/")[0]
-        except:payload_0=''
-        return payload_0
-class MQTT_msg_topic_payload_dict:
-    def __init__(self,topic_0,topic_1,topic_2,topic_3,topic_4,topic_5,payload_0):
-        self.topic_0=topic_0
-        self.topic_1=topic_1
-        self.topic_2=topic_2
-        self.topic_3=topic_3
-        self.topic_4=topic_4
-        self.topic_5=topic_5
-        self.payload_0=payload_0
-
-    def MQTT_to_dict(self):
-        topic_dict={}
-        topic_dict['0']=self.topic_0
-        topic_dict['1']=self.topic_1
-        topic_dict['2']=self.topic_2
-        topic_dict['3']=self.topic_3
-        topic_dict['4']=self.topic_4
-        topic_dict['5']=self.topic_5
-        payload_dict={}
-        payload_dict['0']=self.payload_0
-        topic_payload_dict={}
-        topic_payload_dict['topic']=topic_dict
-        topic_payload_dict['payload']=payload_dict
-        return topic_payload_dict
+# All legacy/compatibility code only. No classes or logic needed for persistent MQTT.
 
 
 
@@ -210,12 +120,14 @@ def sensor_message_handler(payload,topic):
         if relay=='relay' or relay == 'no_relay' or 'temperature' in relay or parameter == 'no_parameter' or relay == 'announce':
             mqtt_dm_topic = MQTT_device_measure_topic(topic)
             mqtt_dm_payload = MQTT_device_measure_payload(payload)
+            from boreas_mediacion.models import MQTT_device_family
+            shellies_family = MQTT_device_family.objects.filter(name='shellies').first()
             try:
-                mqtt_msg(device=mqtt_dm_topic.topic, measures=mqtt_dm_payload.measure,device_id=id,feed='shellies/'+relay).save()
+                mqtt_msg(device=mqtt_dm_topic.topic, measures=mqtt_dm_payload.measure,device_id=id,feed='shellies/'+relay, device_family=shellies_family).save()
             except:
                 mqtt_msg.objects.filter(device=mqtt_dm_topic.topic).update(device=mqtt_dm_topic.topic,
                                                                            measures=mqtt_dm_payload.measure,
-                                                                           report_time=timezone.now(),device_id=id,feed='shellies/'+relay)
+                                                                           report_time=timezone.now(),device_id=id,feed='shellies/'+relay, device_family=shellies_family)
 
         if relay == 'emeter':
             try:
@@ -276,13 +188,14 @@ def router_message_handler(payload,topic):
 
     measure={parameter:value}
     device={'id':device_id}
+    from boreas_mediacion.models import MQTT_device_family
+    router_family = MQTT_device_family.objects.filter(name='router').first()
     if mqtt_msg.objects.filter(device_id=device_id).exists():
         update_device_field(device, parameter, value)
     else:
         try:
-
             mqtt_msg(device=device, measures=measure,
-                     device_id=device_id, feed=feed).save()
+                     device_id=device_id, feed=feed, device_family=router_family).save()
         except:
             pass
 
@@ -302,14 +215,14 @@ def router_report_message_handler(payload,topic):
     device=json.loads(payload.replace("'",'"'))['device']
     device_id = device['id']
     measures=json.loads(payload.replace("'",'"'))['params']
-
+    from boreas_mediacion.models import MQTT_device_family
+    router_family = MQTT_device_family.objects.filter(name='router').first()
     if mqtt_msg.objects.filter(device=device).exists():
-        mqtt_msg.objects.filter(device=device).update(measures=measures, report_time=timezone.now())
+        mqtt_msg.objects.filter(device=device).update(measures=measures, report_time=timezone.now(), device_family=router_family)
     else:
         try:
-
             mqtt_msg(device=device, measures=measures,
-                     device_id=device_id, feed=feed).save()
+                     device_id=device_id, feed=feed, device_family=router_family).save()
         except:
             pass
 def sensor_report_message_handler(payload,topic):
@@ -496,7 +409,69 @@ def on_message(mqtt_client, userdata, msg):
                 sensor_report_message_handler(payload, topic)
         except Exception as e:
             logger.warning(f"Could not process sensor report - {str(e)}")
-    
+
+    # Handle SYS devices
+    elif 'SYS' in topic or '$SYS' in topic or topic.startswith('SYS') or topic.startswith('$SYS'):
+        try:
+            from boreas_mediacion.models import MQTT_device_family
+            sys_family = MQTT_device_family.objects.filter(name='SYS').first()
+            mqtt_dm_topic = MQTT_msg_topic(topic)
+            mqtt_dm_payload = MQTT_msg_payload(payload)
+            device_id = mqtt_dm_topic.get_1()
+            parameter = mqtt_dm_topic.get_2()
+            value = mqtt_dm_payload.get_0()
+            feed = mqtt_dm_topic.get_0()
+            measure = {parameter: value}
+            mqtt_msg(device=device_id, measures=measure, device_id=device_id, feed=feed, device_family=sys_family).save()
+        except Exception as e:
+            logger.warning(f"Could not process SYS message - {str(e)}")
+
+    # Handle gadget devices
+    elif 'gadget' in topic or topic.startswith('gadget'):
+        try:
+            from boreas_mediacion.models import MQTT_device_family
+            gadget_family = MQTT_device_family.objects.filter(name='gadget').first()
+            # Try to parse new gadget message format
+            try:
+                payload_data = json.loads(payload.replace("'", '"'))
+                if 'gadget' in payload_data and 'data' in payload_data:
+                    device_info = payload_data['gadget']
+                    device_id = device_info.get('uuid', 'unknown')
+                    measures = payload_data['data']
+                    feed = 'gadget'
+                    mqtt_msg(device=device_info, measures=measures, device_id=device_id, feed=feed, device_family=gadget_family).save()
+                    return
+            except Exception as e:
+                logger.warning(f"Could not parse new gadget format: {str(e)}")
+            # Fallback to old logic
+            mqtt_dm_topic = MQTT_msg_topic(topic)
+            mqtt_dm_payload = MQTT_msg_payload(payload)
+            device_id = mqtt_dm_topic.get_1()
+            parameter = mqtt_dm_topic.get_2()
+            value = mqtt_dm_payload.get_0()
+            feed = mqtt_dm_topic.get_0()
+            measure = {parameter: value}
+            mqtt_msg(device=device_id, measures=measure, device_id=device_id, feed=feed, device_family=gadget_family).save()
+        except Exception as e:
+            logger.warning(f"Could not process gadget message - {str(e)}")
+
+    # Handle RPC devices
+    elif 'rpc/' in topic or '/rpc/' in topic or topic.startswith('rpc'):
+        try:
+            from boreas_mediacion.models import MQTT_device_family
+            rpc_family = MQTT_device_family.objects.filter(name='rpc').first()
+            mqtt_dm_topic = MQTT_msg_topic(topic)
+            mqtt_dm_payload = MQTT_msg_payload(payload)
+            device_id = mqtt_dm_topic.get_1()
+            parameter = mqtt_dm_topic.get_2()
+            value = mqtt_dm_payload.get_0()
+            feed = mqtt_dm_topic.get_0()
+            measure = {parameter: value}
+            # Save with device_family=rpc_family
+            mqtt_msg(device=device_id, measures=measure, device_id=device_id, feed=feed, device_family=rpc_family).save()
+        except Exception as e:
+            logger.warning(f"Could not process RPC message - {str(e)}")
+
     # Handle Router devices
     elif 'router/' in topic:
         router_message_handler(payload,topic)
@@ -507,7 +482,7 @@ def on_message(mqtt_client, userdata, msg):
                 router_report_message_handler(payload, topic)
         except Exception as e:
             logger.warning(f"Could not process router report - {str(e)}")
-    
+
     # Handle other messages
     else:
         general_message_handler(payload,topic)
@@ -520,110 +495,16 @@ def on_publish(client,userdata,result):
     pass
     return
 
-#Obtenemos datos del broker mqtt
-try:
-    mqtt_server=MQTT_broker.objects.filter(name='rgiot').values_list('server',flat=True)[0]
-    mqtt_port=MQTT_broker.objects.filter(name='rgiot').values_list('port',flat=True)[0]
-    mqtt_keepalive=MQTT_broker.objects.filter(name='rgiot').values_list('keepalive',flat=True)[0]
-    mqtt_user=MQTT_broker.objects.filter(name='rgiot').values_list('user',flat=True)[0]
-    mqtt_password=MQTT_broker.objects.filter(name='rgiot').values_list('password',flat=True)[0]
 
-    MQTT_SERVER = mqtt_server
-    MQTT_PORT = mqtt_port
-    MQTT_KEEPALIVE = mqtt_keepalive
-    MQTT_USER = mqtt_user
-    MQTT_PASSWORD = mqtt_password
-
-
-    client = mqtt.Client()
-    client.on_connect = on_connect
-    client.on_disconnect = on_disconnect
-    client.on_message = on_message
-    client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
-    client.tls_set(certfile=None,
-                        keyfile=None, cert_reqs=ssl.CERT_NONE,
-                        tls_version=ssl.PROTOCOL_TLSv1_2, ciphers=None)
-    client.connect(
-        host=MQTT_SERVER,
-        port=MQTT_PORT,
-        keepalive=MQTT_KEEPALIVE
-    )
-except Exception as e:
-    logger.warning(f"Could not initialize MQTT broker - {str(e)}")
-    logger.warning("MQTT client will not be available until tables are created and populated")
-    client = None
-
-# MQTT Control Functions
-mqtt_client_running = False
-
-def start_mqtt_client():
-    """Start MQTT client loop"""
-    global mqtt_client_running, client
-    if client is None:
-        return {"status": "error", "message": "MQTT client not initialized"}
-    if mqtt_client_running:
-        return {"status": "already_running", "message": "MQTT client is already running"}
-    try:
-        client.loop_start()
-        mqtt_client_running = True
-        logger.info(f"MQTT client started successfully. Running: {mqtt_client_running}")
-        return {"status": "success", "message": "MQTT client started successfully"}
-    except Exception as e:
-        logger.error(f"Error starting MQTT client: {str(e)}")
-        return {"status": "error", "message": f"Error starting MQTT: {str(e)}"}
-
-def stop_mqtt_client():
-    """Stop MQTT client loop"""
-    global mqtt_client_running, client
-    if client is None:
-        return {"status": "error", "message": "MQTT client not initialized"}
-    if not mqtt_client_running:
-        return {"status": "already_stopped", "message": "MQTT client is already stopped"}
-    try:
-        client.loop_stop()
-        mqtt_client_running = False
-        logger.info(f"MQTT client stopped successfully. Running: {mqtt_client_running}")
-        return {"status": "success", "message": "MQTT client stopped successfully"}
-    except Exception as e:
-        logger.error(f"Error stopping MQTT client: {str(e)}")
-        return {"status": "error", "message": f"Error stopping MQTT: {str(e)}"}
-
-def get_mqtt_status():
-    """Get MQTT client status"""
-    global mqtt_client_running, client
-    if client is None:
-        return {"status": "not_initialized", "running": False}
-    return {"status": "initialized", "running": mqtt_client_running}
-
-# MQTT client autostart on import
-# NOTE: MQTT client now runs in separate mqtt_service container
-# This code kept for backwards compatibility with management commands
-# if client is not None:
-#     start_mqtt_client()
-#     logger.info("MQTT client started automatically on app initialization")
-
-
-@receiver(post_save, sender=MQTT_tx)
 def MQTT_tx_post_save(sender, instance, created, **kwargs):
-    if created and client is not None:
-        client.publish(instance.topic,instance.payload)
-        instance.delete()
+    # Legacy: implement direct publish if needed for management commands
+    pass
 
 
-@receiver(post_save, sender=sensor_command)
 def send_command(sender, instance,created, **kwargs):
-    if created and client is not None:
-        device_id=instance.device_id.device_id
-        topic=instance.actuacion.command.replace('device_id',device_id)
-        logger.debug(f'Sending command to {topic}: {instance.actuacion.parameter}')
-        client.publish(topic,instance.actuacion.parameter)
-        instance.delete()
+    # Legacy: implement direct publish if needed for management commands
+    pass
 
-@receiver(post_save, sender=router_get)
 def get_router_parameter(sender, instance,created, **kwargs):
-    if created:
-        device_id=instance.device_id.device_id
-        topic='get/serial/command'.replace('serial',device_id)
-        logger.debug(f'Sending router command to {topic}: {instance.parameter.parameter}')
-        client.publish(topic,instance.parameter.parameter)
-        instance.delete()
+    # Legacy: implement direct publish if needed for management commands
+    pass

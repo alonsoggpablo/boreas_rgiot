@@ -15,13 +15,20 @@ def read_datadis_api():
     import django
     django.setup()
     from boreas_mediacion.datadis_service import DatadisService
-    service = DatadisService()
-    # Implement the actual API read logic here
-    service.sync_supplies()  # Sync supply points from DATADIS API
-    print("DATADIS supply points sync completed.")
-    # Sync consumption and max power for all supplies
-    summary = service.sync_all_supplies_consumption()
-    print(f"DATADIS consumption/max power sync summary: {summary}")
+    from boreas_mediacion.models import DatadisCredentials, DatadisSupply
+    creds = DatadisCredentials.objects.filter(username="B27441401", password="Jl.295469!").first()
+    if not creds:
+        print("No valid DATADIS credentials found.")
+        return
+    service = DatadisService(credentials=creds)
+    # Step 1: Get token explicitly
+    token = service.authenticate()
+    print(f"Obtained DATADIS token: {token[:30]}... (truncated)")
+    # Step 2: Sync supplies to the database
+    created, updated = service.sync_supplies()
+    print(f"Supplies sync: {created} created, {updated} updated")
+    return
+
 
 default_args = {
     'owner': 'boreas',

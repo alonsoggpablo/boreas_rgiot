@@ -17,6 +17,7 @@ services:
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://boreas_user:boreas_password@db:5432/boreas_db
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__DEFAULT_TIMEZONE=Europe/Madrid
       - DJANGO_SETTINGS_MODULE=boreas_mediacion.settings
       - DJANGO_DATABASE_URL=${DATABASE_URL}
     volumes:
@@ -44,6 +45,7 @@ services:
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://boreas_user:boreas_password@db:5432/boreas_db
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__DEFAULT_TIMEZONE=Europe/Madrid
       - DJANGO_SETTINGS_MODULE=boreas_mediacion.settings
       - DJANGO_DATABASE_URL=${DATABASE_URL}
     volumes:
