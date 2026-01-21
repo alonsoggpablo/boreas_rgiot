@@ -1,0 +1,45 @@
+<Instructions>
+- 5 slides, Spanish, .pptx format
+- Slide 1: Título y autores
+- Slide 2: Descripción general del sistema (Boreas, MQTT, Django, Airflow)
+- Slide 3: Captura de pantalla y explicación del dashboard principal
+- Slide 4: Captura de pantalla y explicación de Airflow (monitorización de tareas)
+- Slide 5: Captura de pantalla y explicación de Django Admin (gestión de datos y alertas)
+
+<Placeholders for screenshots, user to replace>
+
+<Slide 1>
+Título: Plataforma de Monitorización Boreas
+Autores: [Tu Nombre]
+
+<Slide 2>
+Título: Arquitectura General
+- Plataforma Boreas para monitorización IoT
+- Backend: Django + MQTT
+- Orquestación de tareas: Airflow
+- Gestión y visualización de datos en tiempo real
+
+<Slide 3>
+Título: Dashboard Principal
+[Insertar captura de pantalla del dashboard]
+- Visualización de mensajes recientes por familia de dispositivos
+- Filtros por familia y dispositivo
+- Estado de la red y alertas
+
+<Slide 4>
+Título: Airflow - Monitorización de Tareas
+[Insertar captura de pantalla de Airflow]
+- Programación y ejecución de tareas automáticas
+- Verificación de alertas y limpieza
+- Integración con Django y MQTT
+
+<Slide 5>
+Título: Django Admin - Gestión
+[Insertar captura de pantalla de Django Admin]
+- Administración de dispositivos, mensajes y alertas
+- Creación y edición de reglas de alerta
+- Supervisión de la base de datos
+
+<Notas>
+- Reemplazar los cuadros de imagen por capturas reales
+- Personalizar autores y detalles según el proyecto
