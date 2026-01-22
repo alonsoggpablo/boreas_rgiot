@@ -179,6 +179,14 @@
                 <li><a href="/api/">API</a></li>
                 <li><a href="http://{{ airflow_host }}/" target="_blank">Airflow</a></li>
             </ul>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+                {% if user.is_authenticated %}
+                    <span style="color:#fff;">👤 {{ user.username }}</span>
+                    <a href="/accounts/logout/" style="color:#fff;">Logout</a>
+                {% else %}
+                    <a href="/accounts/login/" style="color:#fff;">Login</a>
+                {% endif %}
+            </div>
         </div>
     </nav>
 

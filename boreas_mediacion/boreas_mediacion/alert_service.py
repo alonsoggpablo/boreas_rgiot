@@ -312,12 +312,13 @@ Usado: {usage_percent:.1f}%
         
         return None
     
-    def check_active_rules(self) -> List['Alert']:
-        print("[DEBUG] check_active_rules called")
+    def check_active_rules(self, batch_size: int = 20) -> List['Alert']:
+        """
+        Optimizado: No resuelve todas las alertas activas en cada ciclo y procesa familias en lotes.
+        """
+        print("[DEBUG] check_active_rules called (optimized)")
         from django.utils import timezone
         from .models import Alert, AlertRule
-        # Clear all active alerts at the start of each run EXCEPT families_last_readings
-        Alert.objects.filter(status='active').exclude(alert_type='families_last_readings').update(status='resolved', resolved_at=timezone.now())
         alerts = []
         active_rules = AlertRule.objects.filter(active=True)
 
@@ -334,7 +335,8 @@ Usado: {usage_percent:.1f}%
             elif rule.rule_type == 'device_connection':
                 alert = self.check_device_connection_rule(rule)
             elif rule.rule_type == 'families_last_readings':
-                alert = self.check_families_last_readings_rule(rule)
+                # Procesar familias en lotes para evitar sobrecarga
+                alert = self.check_families_last_readings_rule_batched(rule, batch_size=batch_size)
             elif rule.rule_type == 'custom' and rule.config and rule.config.get('check_type') == 'ram':
                 alert = self.check_ram_usage_rule(rule)
             else:
@@ -349,6 +351,60 @@ Usado: {usage_percent:.1f}%
                 alerts.append(alert)
 
         return alerts
+
+    def check_families_last_readings_rule_batched(self, rule, batch_size=20):
+        """
+        Procesa familias en lotes y solo consulta un topic MQTT por familia (el primero encontrado).
+        """
+        from .models import MQTT_device_family, mqtt_msg
+        from django.utils import timezone
+        families = MQTT_device_family.objects.all()
+        summary_lines = []
+        count = 0
+        for family in families.iterator():
+            # Solo un topic por familia: el primero asociado
+            last_msg = mqtt_msg.objects.filter(device_family=family).order_by('-report_time').first()
+            if last_msg:
+                last_time = last_msg.report_time.astimezone(timezone.get_current_timezone()).strftime('%Y-%m-%d %H:%M:%S')
+                summary_lines.append(f"{family.name}: última lectura {last_time} (topic: {last_msg.topic})")
+            else:
+                summary_lines.append(f"{family.name}: sin lecturas")
+            count += 1
+            if count >= batch_size:
+                break
+        message = "\n".join(summary_lines)
+        subject = rule.config.get('subject', 'Resumen de últimas lecturas por familia') if hasattr(rule, 'config') else 'Resumen de últimas lecturas por familia'
+        # Ensure only one active alert exists for this rule and type
+        from .models import Alert
+        active_alerts = Alert.objects.filter(
+            rule=rule,
+            alert_type='families_last_readings',
+            status='active'
+        )
+        if active_alerts.count() > 1:
+            # Resolve all but the most recent
+            to_keep = active_alerts.order_by('-triggered_at').first()
+            active_alerts.exclude(id=to_keep.id).update(status='resolved', resolved_at=timezone.now())
+            alert = to_keep
+        elif active_alerts.count() == 1:
+            alert = active_alerts.first()
+        else:
+            alert = Alert.objects.create(
+                rule=rule,
+                alert_type='families_last_readings',
+                message=message,
+                severity='info',
+                details={'summary': summary_lines},
+                status='active',
+            )
+        # Update alert content if needed
+        alert.message = message
+        alert.severity = 'info'
+        alert.details = {'summary': summary_lines}
+        alert.status = 'active'
+        alert.resolved_at = None
+        alert.save(update_fields=['message', 'severity', 'details', 'status', 'resolved_at'])
+        return alert
 
 
 class DiskSpaceAlertService(AlertService):
@@ -455,28 +511,33 @@ class TopicTimeoutAlertService(AlertService):
         
         # Get last message for this family
         last_msg = mqtt_msg.objects.filter(device_family=family).order_by('-report_time').first()
-        print(f"[DEBUG] {family_name}: last_msg.report_time={getattr(last_msg, 'report_time', None)} | now={timezone.now()} | timeout_threshold={timezone.now() - timedelta(minutes=timeout_minutes)}")
-        
+        from django.utils.timezone import is_aware, make_aware, utc
+        now_utc = timezone.now().astimezone(utc)
+        print(f"[DEBUG] {family_name}: last_msg.report_time={getattr(last_msg, 'report_time', None)} | now_utc={now_utc} | timeout_threshold={now_utc - timedelta(minutes=timeout_minutes)}")
+
         if not last_msg:
             # No messages ever received
             message = f"No data received from family '{family_name}' (never received any messages)"
             severity = 'critical'
         else:
-            # Check timeout
-            timeout_threshold = timezone.now() - timedelta(minutes=timeout_minutes)
-            if last_msg.report_time >= timeout_threshold:
+            # Check timeout (force UTC for both sides)
+            last_report = last_msg.report_time
+            if not is_aware(last_report):
+                last_report = make_aware(last_report, timezone=utc)
+            timeout_threshold = now_utc - timedelta(minutes=timeout_minutes)
+            if last_report >= timeout_threshold:
                 # Message received within timeout, resolve any active alerts and do NOT trigger
                 Alert.objects.filter(
                     rule=rule,
                     alert_type='topic_message_timeout',
                     status='active'
-                ).update(status='resolved', resolved_at=timezone.now())
+                ).update(status='resolved', resolved_at=now_utc)
                 return None
             else:
-                time_elapsed = (timezone.now() - last_msg.report_time).total_seconds() / 3600
+                time_elapsed = (now_utc - last_report).total_seconds() / 3600
                 message = (
                     f"No data received from family '{family_name}' for {time_elapsed:.1f} hours\n"
-                    f"Last message: {last_msg.report_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                    f"Last message: {last_report.strftime('%Y-%m-%d %H:%M:%S')}\n"
                     f"Device: {last_msg.device_id}"
                 )
                 severity = 'warning'

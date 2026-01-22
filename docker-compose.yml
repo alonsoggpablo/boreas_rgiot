@@ -25,9 +25,11 @@ services:
       - .:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
+      - ./boreas_mediacion/management/commands:/app/boreas_mediacion/management/commands
     ports:
       - "8000:8000"
     environment:
+      - TZ=Europe/Madrid
       - DEBUG=True
       - SECRET_KEY=your-secret-key-here-change-in-production
       - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,web,192.168.0.30,172.21.144.1,*

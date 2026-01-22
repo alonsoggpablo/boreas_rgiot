@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Boreas Dashboard{% endblock %}</title>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="/static/favicon.webp" type="image/webp">
+    <link rel="apple-touch-icon" href="/static/favicon.webp" type="image/webp">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #fff; color: #000; min-height: 100vh; }
+        .container { max-width: 1200px; margin: 0 auto; background: #fff; border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.1); overflow: hidden; }
+        .footer { background: #fff; padding: 20px; border-top: 1px solid #e0e0e0; text-align: center; color: #000; font-size: 12px; }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    {% block content %}{% endblock %}
+    <div class="footer">
+        <p>Boreas IoT Solutions</p>
+    </div>
+</body>
+</html>

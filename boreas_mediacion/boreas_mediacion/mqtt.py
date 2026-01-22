@@ -117,23 +117,18 @@ def sensor_message_handler(payload,topic):
         mqtt_dm_dict=mqtt_dm.MQTT_to_dict()
         mqtt_dm_dict['measure'][parameter]=value
 
-        if relay=='relay' or relay == 'no_relay' or 'temperature' in relay or parameter == 'no_parameter' or relay == 'announce':
-            mqtt_dm_topic = MQTT_device_measure_topic(topic)
-            mqtt_dm_payload = MQTT_device_measure_payload(payload)
-            from boreas_mediacion.models import MQTT_device_family
-            shellies_family = MQTT_device_family.objects.filter(name='shellies').first()
-            try:
-                mqtt_msg(device=mqtt_dm_topic.topic, measures=mqtt_dm_payload.measure,device_id=id,feed='shellies/'+relay, device_family=shellies_family).save()
-            except:
-                mqtt_msg.objects.filter(device=mqtt_dm_topic.topic).update(device=mqtt_dm_topic.topic,
-                                                                           measures=mqtt_dm_payload.measure,
-                                                                           report_time=timezone.now(),device_id=id,feed='shellies/'+relay, device_family=shellies_family)
 
-        if relay == 'emeter':
-            try:
-                mqtt_msg(device=mqtt_dm_dict['device'],measures=mqtt_dm_dict['measure'],device_id=id,feed=feed).save()
-            except:
-                pass  # Silently fail if update fails
+        # Always assign shellies_family for any shellies message
+        mqtt_dm_topic = MQTT_device_measure_topic(topic)
+        mqtt_dm_payload = MQTT_device_measure_payload(payload)
+        from boreas_mediacion.models import MQTT_device_family
+        shellies_family = MQTT_device_family.objects.filter(name='shellies').first()
+        try:
+            mqtt_msg(device=mqtt_dm_topic.topic, measures=mqtt_dm_payload.measure,device_id=id,feed='shellies/'+relay, device_family=shellies_family).save()
+        except:
+            mqtt_msg.objects.filter(device=mqtt_dm_topic.topic).update(device=mqtt_dm_topic.topic,
+                                                                       measures=mqtt_dm_payload.measure,
+                                                                       report_time=timezone.now(),device_id=id,feed='shellies/'+relay, device_family=shellies_family)
 
         if parameter=='total_returned':
             try:
@@ -162,10 +157,13 @@ def general_message_handler(payload,topic):
                 try:device_id=mqtt_dm_topic.get_id()
                 except:device_id='no_device_id'
 
+        from boreas_mediacion.models import MQTT_device_family
+        # Try to assign device_family based on feed or topic
+        family = MQTT_device_family.objects.filter(name=feed).first()
         try:
-            mqtt_msg(device=mqtt_dm_topic.topic+'_'+device_id, measures=mqtt_dm_payload.measure,feed=feed,device_id=device_id).save()
+            mqtt_msg(device=mqtt_dm_topic.topic+'_'+device_id, measures=mqtt_dm_payload.measure,feed=feed,device_id=device_id, device_family=family).save()
         except:
-            mqtt_msg.objects.filter(device=mqtt_dm_topic.topic+'_'+device_id).update(device=mqtt_dm_topic.topic+'_'+device_id, measures=mqtt_dm_payload.measure, report_time=timezone.now(),feed=feed,device_id=device_id)
+            mqtt_msg.objects.filter(device=mqtt_dm_topic.topic+'_'+device_id).update(device=mqtt_dm_topic.topic+'_'+device_id, measures=mqtt_dm_payload.measure, report_time=timezone.now(),feed=feed,device_id=device_id, device_family=family)
     except Exception as e:
         # Silently ignore errors in general_message_handler
         pass
@@ -241,13 +239,14 @@ def sensor_report_message_handler(payload,topic):
         measures=json.loads(payload.replace("'",'"'))['measures']
     except:measures='no_measures'
 
+    from boreas_mediacion.models import MQTT_device_family
+    family = MQTT_device_family.objects.filter(name=feed).first()
     if mqtt_msg.objects.filter(device=device).exists():
-        mqtt_msg.objects.filter(device=device).update(measures=measures, report_time=timezone.now())
+        mqtt_msg.objects.filter(device=device).update(measures=measures, report_time=timezone.now(), device_family=family)
     else:
         try:
-
             mqtt_msg(device=device, measures=measures,
-                     device_id=device_id, feed=feed).save()
+                     device_id=device_id, feed=feed, device_family=family).save()
         except:
             pass
 

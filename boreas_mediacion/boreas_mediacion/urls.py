@@ -31,8 +31,9 @@ router.register(r'sigfox/readings', views.SigfoxReadingViewSet, basename='sigfox
 
 
 urlpatterns = [
-    path('', RedirectView.as_view(url='/api/mqtt_msgs/', permanent=False)),
+    path('', RedirectView.as_view(url='/dashboard/family-messages/', permanent=False)),
     path('dashboard/family-messages/', views.family_last_messages, name='family_messages'),
+    path('accounts/', include('django.contrib.auth.urls')),  # Django login/logout
     path('api/', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('admin/', admin.site.urls),
@@ -42,6 +43,5 @@ urlpatterns = [
     path('api/sigfox/gas', views.SigfoxCallbackView.as_view(), name='sigfox_gas'),
     re_path(r'^api/mqtt_msg-list/$', views.mqtt_msgViewList.as_view()),
     re_path(r'^api/reported_measure-list/$', views.reported_measureViewList.as_view()),
-
 ]
 

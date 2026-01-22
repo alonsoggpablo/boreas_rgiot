@@ -8,6 +8,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     libpq-dev \
     gcc \
+    tzdata \
+    && ln -fs /usr/share/zoneinfo/Europe/Madrid /etc/localtime \
+    && dpkg-reconfigure -f noninteractive tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements

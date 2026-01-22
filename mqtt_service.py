@@ -84,20 +84,21 @@ def general_message_handler(payload, topic):
         topic_obj = MQTT_device_measure_topic(topic)
         device_id = topic_obj.get_id()
         feed = topic_obj.get_feed()
-        
+
         # Parse JSON payload if possible
         try:
             measures = json.loads(payload)
         except:
             measures = {"value": payload}
-        
-        # Get device family from topic
-        try:
-            topic_record = MQTT_topic.objects.filter(topic=topic).first()
-            family = topic_record.family if topic_record else None
-        except:
-            family = None
-        
+
+        # Buscar coincidencia por prefijo en los topics activos
+        topic_record = None
+        for t in MQTT_topic.objects.filter(active=True):
+            if topic.startswith(t.topic):
+                topic_record = t
+                break
+        family = topic_record.family if topic_record else None
+
         # Use update_or_create to handle uniqueness on device field
         device_data = {"device_id": device_id, "feed": feed}
         mqtt_msg.objects.update_or_create(
@@ -109,7 +110,7 @@ def general_message_handler(payload, topic):
                 "device_family": family
             }
         )
-        logger.debug(f"Message saved: {device_id} from {topic}")
+        logger.debug(f"Message saved: {device_id} from {topic} (family: {family})")
     except Exception as e:
         logger.error(f"Error in general_message_handler: {str(e)}")
 
@@ -120,16 +121,26 @@ def router_report_message_handler(payload, topic):
             measures = json.loads(payload)
         except:
             measures = {"value": payload}
-        
-        # Use update_or_create for router messages
+
+        # Obtener device_id y familia router
+        from boreas_mediacion.models import MQTT_device_family
+        # Extraer device_id del topic router/<device_id>
+        try:
+            device_id = topic.split('/')[1]
+        except:
+            device_id = 'unknown'
+        family = MQTT_device_family.objects.filter(name='router').first()
+
         mqtt_msg.objects.update_or_create(
-            device={"feed": "router"},
+            device={"device_id": device_id, "feed": "router"},
             defaults={
+                "device_id": device_id,
                 "measures": measures,
-                "feed": "router"
+                "feed": "router",
+                "device_family": family
             }
         )
-        logger.debug(f"Router message saved from {topic}")
+        logger.debug(f"Router message saved: {device_id} from {topic} (family: {family})")
     except Exception as e:
         logger.error(f"Error in router_report_message_handler: {str(e)}")
 
@@ -192,6 +203,27 @@ def on_message(client, userdata, msg):
             general_message_handler(payload, topic)
         elif feed == 'router':
             router_report_message_handler(payload, topic)
+        elif feed == 'shellies2' or 'shellies2' in topic:
+            # Explicitly assign shellies2 family
+            from boreas_mediacion.models import MQTT_device_family
+            family = MQTT_device_family.objects.filter(name='shellies2').first()
+            topic_obj = MQTT_device_measure_topic(topic)
+            device_id = topic_obj.get_id()
+            feed_val = topic_obj.get_feed()
+            try:
+                measures = json.loads(payload)
+            except:
+                measures = {"value": payload}
+            mqtt_msg.objects.update_or_create(
+                device={"device_id": device_id, "feed": feed_val},
+                defaults={
+                    "device_id": device_id,
+                    "measures": measures,
+                    "feed": feed_val,
+                    "device_family": family
+                }
+            )
+            logger.debug(f"shellies2 message saved: {device_id} from {topic}")
         else:
             general_message_handler(payload, topic)
             

@@ -303,6 +303,10 @@ class SigfoxCallbackView(APIView):
 # Web Views for Dashboard
 
 def family_last_messages(request):
+    from django.contrib.auth.decorators import login_required
+    if not request.user.is_authenticated:
+        from django.shortcuts import redirect
+        return redirect('login')
     family_data = []
     # Add DatadisSupply last read (updated_at) for each active supply
     from .models import DatadisSupply

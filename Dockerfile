@@ -10,11 +10,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Establecer directorio de trabajo
 WORKDIR /app
 
-# Instalar dependencias del sistema
+
+# Instalar dependencias del sistema y tzdata para zona horaria
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     gcc \
     curl \
+    tzdata \
+    && ln -fs /usr/share/zoneinfo/Europe/Madrid /etc/localtime \
+    && dpkg-reconfigure -f noninteractive tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar archivos de requisitos
