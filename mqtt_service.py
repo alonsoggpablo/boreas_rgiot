@@ -172,15 +172,9 @@ def on_disconnect(client, userdata, rc):
     else:
         logger.info('MQTT disconnected cleanly')
     
-    # Attempt to reconnect
-    global mqtt_running
-    if mqtt_running:
-        try:
-            logger.info("Attempting to reconnect...")
-            time.sleep(5)
-            client.reconnect()
-        except Exception as e:
-            logger.warning(f'Could not reconnect to MQTT broker - {str(e)}')
+    # Set disconnect flag for periodic retry
+    global mqtt_running, mqtt_disconnected
+    mqtt_disconnected = True
 
 def on_message(client, userdata, msg):
     """MQTT message callback"""
@@ -293,11 +287,22 @@ def initialize_mqtt():
 
 def keep_alive():
     """Keep the service running"""
-    global mqtt_running
+    global mqtt_running, mqtt_disconnected, mqtt_client
     logger.info("MQTT Service running. Press Ctrl+C to stop.")
+    last_retry = time.time()
     try:
         while mqtt_running:
             time.sleep(1)
+            # Retry every 10 minutes if disconnected
+            if mqtt_disconnected and (time.time() - last_retry) > 600:
+                logger.info("Retrying MQTT connection after disconnect...")
+                try:
+                    mqtt_client.reconnect()
+                    mqtt_disconnected = False
+                    logger.info("MQTT reconnect successful.")
+                except Exception as e:
+                    logger.warning(f"MQTT reconnect failed: {str(e)}")
+                last_retry = time.time()
     except KeyboardInterrupt:
         logger.info("Shutting down MQTT Service...")
         if mqtt_client:
@@ -307,7 +312,7 @@ def keep_alive():
 
 if __name__ == "__main__":
     logger.info("Starting MQTT Service...")
-    
+    mqtt_disconnected = False
     # Give database time to start if this container starts before db
     max_retries = 30
     for attempt in range(max_retries):
@@ -317,6 +322,5 @@ if __name__ == "__main__":
         else:
             logger.warning(f"Connection attempt {attempt + 1}/{max_retries} failed. Retrying in 10 seconds...")
             time.sleep(10)
-    
     logger.error("Failed to start MQTT Service after maximum retries")
     sys.exit(1)
