@@ -1,0 +1,43 @@
+version: '3.7'
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./rules.yml:/etc/prometheus/rules.yml
+    ports:
+      - "9090:9090"
+    restart: always
+    networks:
+      - boreas_rgiot_default
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    ports:
+      - "9093:9093"
+    restart: always
+    networks:
+      - boreas_rgiot_default
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    restart: always
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana_prometheus_datasource.yaml:/etc/grafana/provisioning/datasources/prometheus.yaml
+    networks:
+      - boreas_rgiot_default
+
+
+volumes:
+  grafana-data:
+
+networks:
+  boreas_rgiot_default:
+    external: true

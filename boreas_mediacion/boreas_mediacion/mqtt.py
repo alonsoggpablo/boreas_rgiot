@@ -118,17 +118,14 @@ def sensor_message_handler(payload,topic):
         mqtt_dm_dict['measure'][parameter]=value
 
 
-        # Always assign shellies_family for any shellies message
-        mqtt_dm_topic = MQTT_device_measure_topic(topic)
-        mqtt_dm_payload = MQTT_device_measure_payload(payload)
         from boreas_mediacion.models import MQTT_device_family
-        shellies_family = MQTT_device_family.objects.filter(name='shellies').first()
+        family = MQTT_device_family.objects.filter(name=feed).first()
         try:
-            mqtt_msg(device=mqtt_dm_topic.topic, measures=mqtt_dm_payload.measure,device_id=id,feed='shellies/'+relay, device_family=shellies_family).save()
+            mqtt_msg(device=mqtt_dm_topic.topic, measures=mqtt_dm_payload.measure,device_id=id,feed=feed, device_family=family).save()
         except:
             mqtt_msg.objects.filter(device=mqtt_dm_topic.topic).update(device=mqtt_dm_topic.topic,
                                                                        measures=mqtt_dm_payload.measure,
-                                                                       report_time=timezone.now(),device_id=id,feed='shellies/'+relay, device_family=shellies_family)
+                                                                       report_time=timezone.now(),device_id=id,feed=feed, device_family=family)
 
         if parameter=='total_returned':
             try:
@@ -275,7 +272,6 @@ def reported_measure_handler(payload, topic):
                 'lat': payload_data.get('lat', 0),
                 'alt': payload_data.get('alt', 0)
             }
-            
             # All other fields are measures
             exclude_fields = {'idema', 'ubi', 'lon', 'lat', 'alt', 'fint'}
             for name, value in payload_data.items():
@@ -290,8 +286,17 @@ def reported_measure_handler(payload, topic):
                     elif name in ['ta', 'tamin', 'tamax', 'tpr', 'ts', 'tss5cm', 'tss20cm']: unit = '°C'
                     elif name in ['vis']: unit = 'km'
                     elif name in ['inso']: unit = 'min'
-                    
                     measures_dict[name] = {'value': value, 'unit': unit}
+            # Also save to mqtt_msg with correct device_family
+            from boreas_mediacion.models import MQTT_device_family
+            family = MQTT_device_family.objects.filter(name='aemet').first()
+            try:
+                mqtt_msg(device=device_info, device_id=device_id, feed='aemet', measures=measures_dict, device_family=family).save()
+            except Exception as e:
+                try:
+                    mqtt_msg.objects.filter(device_id=device_id, feed='aemet').update(device=device_info, measures=measures_dict, report_time=timezone.now(), device_family=family)
+                except Exception as update_error:
+                    logger.warning(f"Could not save/update mqtt_msg for aemet - {str(update_error)}")
         
         # Check if it has device_info or device structure
         elif 'device_info' in payload_data or 'device' in payload_data:

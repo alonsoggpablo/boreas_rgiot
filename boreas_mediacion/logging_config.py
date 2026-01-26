@@ -44,7 +44,7 @@ LOGGING = {
             'propagate': False,
         },
         'boreas_mediacion': {
-            'handlers': ['null'],  # Route all boreas_mediacion messages to null handler (discard them)
+            'handlers': ['console'],  # Route all boreas_mediacion messages to console handler
             'level': 'DEBUG',
             'propagate': False,
         },

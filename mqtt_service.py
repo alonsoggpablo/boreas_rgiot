@@ -25,7 +25,7 @@ from boreas_mediacion.models import mqtt_msg, reported_measure, MQTT_broker, MQT
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - MQTT Service - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -98,6 +98,10 @@ def general_message_handler(payload, topic):
                 topic_record = t
                 break
         family = topic_record.family if topic_record else None
+        # Fallback: try to resolve family by feed name if not found by topic
+        if family is None:
+            from boreas_mediacion.models import MQTT_device_family
+            family = MQTT_device_family.objects.filter(name=feed).first()
 
         # Use update_or_create to handle uniqueness on device field
         device_data = {"device_id": device_id, "feed": feed}
@@ -149,14 +153,13 @@ mqtt_client = None
 mqtt_running = False
 
 def on_connect(client, userdata, flags, rc):
-    """MQTT connection callback"""
+    """MQTT connection callback (MQTTv3.1.1)"""
     if rc == 0:
         logger.info("MQTT connected successfully")
         # Subscribe to all active topics
         try:
             topics_list = MQTT_topic.objects.filter(active=True).values_list('topic', flat=True)
             logger.info(f"Subscribing to {len(topics_list)} topics")
-            
             for topic in topics_list:
                 client.subscribe(topic)
             logger.info("All topics subscribed successfully")
@@ -166,9 +169,20 @@ def on_connect(client, userdata, flags, rc):
         logger.error(f"Failed to connect, return code {rc}")
 
 def on_disconnect(client, userdata, rc):
-    """MQTT disconnection callback"""
+    """MQTT disconnection callback (MQTTv3.1.1)"""
+    reason_map = {
+        0: 'Clean disconnection',
+        1: 'Unexpected disconnection',
+        2: 'Invalid protocol version',
+        3: 'Identifier rejected',
+        4: 'Server unavailable',
+        5: 'Bad username or password',
+        6: 'Not authorized',
+        7: 'Reserved',
+    }
+    reason = reason_map.get(rc, 'Unknown reason')
     if rc != 0:
-        logger.warning(f'Unexpected disconnection. Code: {rc}')
+        logger.warning(f'Unexpected disconnection. Code: {rc} ({reason})')
     else:
         logger.info('MQTT disconnected cleanly')
     
@@ -193,7 +207,9 @@ def on_message(client, userdata, msg):
         feed = topic_obj.get_feed()
         
         # Route to appropriate handler
-        if device_type in ['shelly1pm', 'shellyem3', 'shellypro4pm']:
+        if feed == 'aemet':
+            pass  # AEMET MQTT logic removed
+        elif device_type in ['shelly1pm', 'shellyem3', 'shellypro4pm']:
             general_message_handler(payload, topic)
         elif feed == 'router':
             router_report_message_handler(payload, topic)
@@ -247,8 +263,9 @@ def initialize_mqtt():
         
         logger.info(f"Connecting to {mqtt_server}:{mqtt_port} as {mqtt_user}")
         
-        # Create and configure MQTT client
-        mqtt_client = mqtt.Client(client_id=f"mqtt_service_{os.getpid()}")
+        # Create and configure MQTT client with MQTTv5
+        mqtt_client = mqtt.Client(client_id=f"mqtt_service_{os.getpid()}", clean_session=True, protocol=mqtt.MQTTv311)
+        logger.info(f"MQTT client protocol version: {mqtt_client._protocol} (should be 4 for MQTTv311), clean_session: True")
         mqtt_client.on_connect = on_connect
         mqtt_client.on_disconnect = on_disconnect
         mqtt_client.on_message = on_message
@@ -265,12 +282,14 @@ def initialize_mqtt():
             tls_version=ssl.PROTOCOL_TLSv1_2,
             ciphers=None
         )
+        # Allow insecure TLS (do not validate broker certificate)
+        mqtt_client.tls_insecure_set(True)
         
         # Connect to broker
         mqtt_client.connect(
             host=mqtt_server,
             port=mqtt_port,  # Use port from DB (should be 8883)
-            keepalive=mqtt_keepalive
+            keepalive=30  # Try shorter keepalive
         )
         
         # Start network loop

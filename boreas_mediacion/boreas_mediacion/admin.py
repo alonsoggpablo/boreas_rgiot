@@ -9,13 +9,37 @@ from django.utils import timezone
 import logging
 from .models import mqtt_msg, MQTT_device_family, MQTT_broker, MQTT_feed, sensor_command, sensor_actuacion, router_get, \
     router_parameter, reported_measure, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, \
-    DatadisCredentials, DatadisSupply, AlertRule, Alert, \
-    SystemConfiguration
+    DatadisCredentials, DatadisSupply, SystemConfiguration
 from .models import MQTT_topic
+from .models import AemetStation, AemetData
+# --- AEMET API Models ---
+@admin.register(AemetStation)
+class AemetStationAdmin(admin.ModelAdmin):
+    list_display = ('station_id', 'name', 'province', 'active', 'created_at', 'updated_at')
+    list_filter = ('active', 'province')
+    search_fields = ('station_id', 'name', 'province')
+
+    actions = ['activate_stations', 'deactivate_stations']
+
+    def activate_stations(self, request, queryset):
+        updated = queryset.update(active=True)
+        self.message_user(request, f"{updated} station(s) activated.")
+    activate_stations.short_description = "Activate selected stations"
+
+    def deactivate_stations(self, request, queryset):
+        updated = queryset.update(active=False)
+        self.message_user(request, f"{updated} station(s) deactivated.")
+    deactivate_stations.short_description = "Deactivate selected stations"
+
+@admin.register(AemetData)
+class AemetDataAdmin(admin.ModelAdmin):
+    list_display = ('station', 'timestamp', 'created_at')
+    list_filter = ('station',)
+    search_fields = ('station__station_id',)
 from . import mqtt as mqtt_module
 from .wirelesslogic_service import WirelessLogicService
 from .datadis_service import DatadisService
-from .alert_service import DiskSpaceAlertService, DeviceConnectionAlertService
+
 from django.urls import reverse
 from django.utils.html import format_html
 
@@ -25,107 +49,6 @@ class MQTT_MSG_Admin(admin.ModelAdmin):
     list_display = ('device_id','device','measures','feed','device_family','report_time')
     list_filter = ('feed','report_time','device_id','device_family')
     search_fields = ('device_id','device','measures','report_time')
-admin.site.register(mqtt_msg,MQTT_MSG_Admin)
-
-# Register your models here.
-#register MQTT_topic
-class MQTT_topic_Admin(admin.ModelAdmin):
-    class Meta:
-        app_label = 'MQTT READS'
-    list_display = ('topic','active','ro_rw','description','family','broker')
-    list_filter = ('active','ro_rw','family','broker')
-    search_fields = ('topic','description','family','broker')
-    actions = ['activate_topics', 'deactivate_topics']
-    
-    def activate_topics(self, request, queryset):
-        # Activate selected MQTT topics
-        updated = queryset.update(active=True)
-        self.message_user(request, f'{updated} topic(s) activated successfully')
-    activate_topics.short_description = "✓ Activate selected topics"
-    
-    def deactivate_topics(self, request, queryset):
-        # Deactivate selected MQTT topics
-        updated = queryset.update(active=False)
-        self.message_user(request, f'{updated} topic(s) deactivated successfully')
-    deactivate_topics.short_description = "✗ Deactivate selected topics"
-
-admin.site.register(MQTT_topic,MQTT_topic_Admin)
-
-class MQTT_device_family_Admin(admin.ModelAdmin):
-    class Meta:
-        app_label = 'MQTT READS'
-    list_display = ('name',)
-    list_filter = ('name',)
-    search_fields = ('name',)
-admin.site.register(MQTT_device_family,MQTT_device_family_Admin)
-
-class MQTT_broker_Admin(admin.ModelAdmin):
-    class Meta:
-        app_label = 'MQTT READS'
-    list_display = ('name','server','user','password','port','keepalive','description','active')
-    list_filter = ('active',)
-    search_fields = ('name','server','description')
-
-
-admin.site.register(MQTT_broker,MQTT_broker_Admin)
-
-
-#register MQTT_feed
-class MQTT_feed_Admin(admin.ModelAdmin):
-    class Meta:
-        app_label = 'MQTT READS'
-    list_display = ('name','description','topic','get_family')
-    list_filter = ('topic__family','name','description')
-    search_fields = ('name','description','topic__topic')
-   
-    def get_family(self, obj):
-        # Display the family of the feed's topic
-        if obj.topic and obj.topic.family:
-            return obj.topic.family.name
-        return '-'
-    get_family.short_description = 'Family'
-
-admin.site.register(MQTT_feed,MQTT_feed_Admin)
-
-#register sensor command
-class sensor_command_Admin(admin.ModelAdmin):
-    class Meta:
-        app_label = 'MQTT READS'
-
-    list_display = ('device_id', 'circuit', 'actuacion')
-    list_filter = ('device_id', 'circuit', 'actuacion')
-    search_fields = ('device_id', 'circuit', 'actuacion')
-
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == 'device_id':
-            kwargs['queryset'] = mqtt_msg.objects.order_by('device_id').distinct('device_id')
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
-admin.site.register(sensor_command,sensor_command_Admin)
-
-#register sensor actuacion
-class sensor_actuacion_Admin(admin.ModelAdmin):
-    class Meta:
-        app_label = 'MQTT READS'
-    list_display = ('tipo','command','description')
-    list_filter = ('tipo','command','description')
-    search_fields = ('tipo','command','description')
-admin.site.register(sensor_actuacion,sensor_actuacion_Admin)
-
-#register router_get
-class router_get_Admin(admin.ModelAdmin):
-    class Meta:
-        app_label = 'MQTT READS'
-    list_display = ('device_id','parameter')
-    list_filter = ('device_id','parameter')
-    search_fields = ('device_id','parameter')
-
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == 'device_id':
-            kwargs['queryset'] = mqtt_msg.objects.order_by('device_id').distinct('device_id')
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
-admin.site.register(router_get,router_get_Admin)
 
 #register router_parameter
 class router_parameter_Admin(admin.ModelAdmin):

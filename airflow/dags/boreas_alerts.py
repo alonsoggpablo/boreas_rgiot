@@ -49,7 +49,7 @@ dag = DAG(
     'boreas_alerts',
     default_args=default_args,
     description='Boreas Alert Monitoring System',
-    schedule_interval='0 2,9,10 * * *',  # 02:00, 09:00, 10:00 daily
+    schedule_interval='*/30 * * * *',  # Every 30 minutes
     catchup=False,
     tags=['boreas', 'alerts', 'monitoring'],
 )
@@ -67,7 +67,14 @@ def check_all_active_alerts():
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'boreas_mediacion.settings')
     sys.path.insert(0, '/app')
     django.setup()
+
     from boreas_mediacion.alert_service import AlertService
+    from boreas_mediacion.models import Alert
+    from django.utils import timezone
+
+    # Resolve all active alerts at the start of each DAG run
+    resolved_count = Alert.objects.filter(status='active').update(status='resolved', resolved_at=timezone.now())
+    print(f"[DAG INIT] Resolved {resolved_count} active alerts at start of DAG run.")
 
     print("\n==============================")
     print("Checking ALL active alert rules")

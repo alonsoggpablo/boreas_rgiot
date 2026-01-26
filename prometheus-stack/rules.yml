@@ -1,0 +1,56 @@
+groups:
+- name: boreas_alert_rules
+  rules:
+  - alert: FamiliesNoMessage
+    expr: families_no_message_count > 0
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Some device families have not received messages in the last hour."
+      description: "families_no_message_count is {{ $value }}. Check device connectivity."
+
+  - alert: FamilyTimeout
+    expr: family_timeout == 1
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Timeout for device family"
+      description: "No messages received for family {{ $labels.family }} in the last hour."
+
+  - alert: MQTTTopicTimeout
+    expr: mqtt_topic_timeout == 1
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Timeout for MQTT topic"
+      description: "No messages received for topic {{ $labels.topic }} in the last {{ $value }} minutes."
+
+  - alert: SigfoxDeviceTimeout
+    expr: sigfox_device_timeout == 1
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Timeout for Sigfox device"
+      description: "No messages received for Sigfox device {{ $labels.device_id }} in the last hour."
+
+  - alert: WirelessLogicSIMTimeout
+    expr: wirelesslogic_sim_timeout == 1
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Timeout for WirelessLogic SIM"
+      description: "No sync for WirelessLogic SIM {{ $labels.iccid }} in the last hour."
+
+  - alert: DatadisSupplyTimeout
+    expr: datadis_supply_timeout == 1
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Timeout for Datadis supply"
+      description: "No sync for Datadis supply {{ $labels.cups }} in the last hour."

@@ -45,6 +45,7 @@ services:
       - MQTT_USER=boreas
       - MQTT_PASSWORD=RGIoT
       - MQTT_TLS=True
+      - AEMET_API_KEY=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJwYWJsb0ByZ2dlc3Rpb255ZW5lcmdpYS5jb20iLCJqdGkiOiI2YjYwYjQwYS1jYjQwLTQwYjAtYjQwYS1jYjQwYjQwYjQwYjQifQ.1QwQbQwQbQwQbQwQbQwQbQwQbQwQbQwQbQwQbQwQbQwQbQw
     depends_on:
       db:
         condition: service_healthy

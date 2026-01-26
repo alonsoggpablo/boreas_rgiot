@@ -38,6 +38,7 @@ urlpatterns = [
     path('api/', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('admin/', admin.site.urls),
+    path('metrics/', __import__('boreas_mediacion.metrics').metrics.metrics_view),
     path('external-devices/', boreas_bot_views.devices_external_list, name='external_devices'),
     path('api/publish/', PublishView.as_view(), name='publish'),
     path('api/mqtt-control/', views.mqtt_control, name='mqtt_control'),
