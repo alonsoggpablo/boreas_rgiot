@@ -6,7 +6,7 @@ Run this periodically (e.g., every 10 minutes via cron or Airflow).
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from boreas_mediacion.models import AlertRule, Alert
-from boreas_mediacion.alert_service import TopicTimeoutAlertService
+## ALERT SERVICE REMOVED: All alerting is now handled by Prometheus metrics
 
 
 class Command(BaseCommand):

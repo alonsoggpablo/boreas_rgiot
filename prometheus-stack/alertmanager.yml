@@ -2,13 +2,18 @@ global:
   resolve_timeout: 5m
 
 route:
-  receiver: 'default'
+  receiver: 'email-hourly'
+  group_by: ['alertname']
+  group_wait: 1m
+  group_interval: 1h
+  repeat_interval: 1h
+
 receivers:
-  - name: 'default'
+  - name: 'email-hourly'
     email_configs:
-      - to: 'your-email@example.com'
-        from: 'alertmanager@example.com'
-        smarthost: 'smtp.example.com:587'
-        auth_username: 'user'
-        auth_password: 'password'
+      - to: 'alonsogpablo@rggestionyenergia.com'
+        from: 'alonsogpablo@rggestionyenergia.com'
+        smarthost: 'mail.rggestionyenergia.com:587'
+        auth_username: 'alonsogpablo@rggestionyenergia.com'
+        auth_password: 'neor9u9i9r7p'
         require_tls: true
