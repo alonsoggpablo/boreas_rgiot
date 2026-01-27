@@ -39,6 +39,8 @@ services:
       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://boreas_user:boreas_password@db:5432/boreas_db
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__DEFAULT_TIMEZONE=Europe/Madrid
+      - AIRFLOW__CORE__DEFAULT_UI_TIMEZONE=Europe/Madrid
+      - AIRFLOW__WEBSERVER__DEFAULT_UI_TIMEZONE=Europe/Madrid
       - DJANGO_SETTINGS_MODULE=boreas_mediacion.settings
       - DJANGO_DATABASE_URL=${DATABASE_URL}
       - AEMET_API_KEY=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhbG9uc29ncGFibG9AZ21haWwuY29tIiwianRpIjoiOTE4MzQ4MTItYTUwMC00NGMwLWExYjAtYTllNmIyMzgxNmRlIiwiaXNzIjoiQUVNRVQiLCJpYXQiOjE3NjkzNDMzMzEsInVzZXJJZCI6IjkxODM0ODEyLWE1MDAtNDRjMC1hMWIwLWE5ZTZiMjM4MTZkZSIsInJvbGUiOiIifQ.u6jZlTamG3za-kHeyuHdQ9W0m1dQsbeAE00ZW_h-LdI
@@ -67,6 +69,8 @@ services:
       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://boreas_user:boreas_password@db:5432/boreas_db
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__DEFAULT_TIMEZONE=Europe/Madrid
+      - AIRFLOW__CORE__DEFAULT_UI_TIMEZONE=Europe/Madrid
+      - AIRFLOW__WEBSERVER__DEFAULT_UI_TIMEZONE=Europe/Madrid
       - DJANGO_SETTINGS_MODULE=boreas_mediacion.settings
       - DJANGO_DATABASE_URL=${DATABASE_URL}
       - AEMET_API_KEY=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhbG9uc29ncGFibG9AZ21haWwuY29tIiwianRpIjoiOTE4MzQ4MTItYTUwMC00NGMwLWExYjAtYTllNmIyMzgxNmRlIiwiaXNzIjoiQUVNRVQiLCJpYXQiOjE3NjkzNDMzMzEsInVzZXJJZCI6IjkxODM0ODEyLWE1MDAtNDRjMC1hMWIwLWE5ZTZiMjM4MTZkZSIsInJvbGUiOiIifQ.u6jZlTamG3za-kHeyuHdQ9W0m1dQsbeAE00ZW_h-LdI

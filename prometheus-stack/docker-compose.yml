@@ -2,12 +2,16 @@ version: '3.7'
 services:
   prometheus:
     image: prom/prometheus:latest
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./rules.yml:/etc/prometheus/rules.yml
     ports:
       - "9090:9090"
     restart: always
+    environment:
+      - TZ=Europe/Madrid
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./rules.yml:/etc/prometheus/rules.yml
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     networks:
       - boreas_rgiot_default
 

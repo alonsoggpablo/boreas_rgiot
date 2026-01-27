@@ -4,7 +4,7 @@ Airflow DAG to fetch AEMET API data for all active stations and store in Django 
 import sys
 import os
 import requests
-from datetime import datetime, timedelta
+import pendulum
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
@@ -36,7 +36,7 @@ def fetch_aemet_data(**context):
                             datos_content = datos_resp.text
                         AemetData.objects.update_or_create(
                             station=station,
-                            timestamp=datetime.utcnow(),
+                            timestamp=pendulum.now('Europe/Madrid'),
                             defaults={'data': datos_content}
                         )
                         print(f"Fetched and stored AEMET data for {station.station_id}")
@@ -49,19 +49,20 @@ def fetch_aemet_data(**context):
         except Exception as e:
             print(f"Error fetching {station.station_id}: {e}")
 
+
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
-    'start_date': datetime(2024, 1, 1),
+    'start_date': pendulum.datetime(2024, 1, 1, tz="Europe/Madrid"),
     'retries': 1,
-    'retry_delay': timedelta(minutes=5),
+    'retry_delay': pendulum.duration(minutes=5),
 }
 
 dag = DAG(
     'aemet_api_fetch',
     default_args=default_args,
     description='Fetch AEMET API data for all active stations',
-    schedule_interval='0 * * * *',
+    schedule_interval='@hourly',
     catchup=False,
     tags=['aemet', 'api', 'weather'],
 )

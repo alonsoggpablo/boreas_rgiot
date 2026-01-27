@@ -4,9 +4,9 @@ global:
 route:
   receiver: 'email-hourly'
   group_by: ['alertname']
-  group_wait: 1m
+  group_wait: 30s
   group_interval: 1h
-  repeat_interval: 1h
+  repeat_interval: 2h
 
 receivers:
   - name: 'email-hourly'

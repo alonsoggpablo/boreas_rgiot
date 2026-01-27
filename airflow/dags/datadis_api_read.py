@@ -3,7 +3,7 @@ Airflow DAG to read DATADIS API every 60 minutes
 """
 import sys
 import os
-from datetime import datetime, timedelta
+import pendulum
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
@@ -33,7 +33,7 @@ def read_datadis_api():
 default_args = {
     'owner': 'boreas',
     'retries': 1,
-    'retry_delay': timedelta(minutes=5),
+    'retry_delay': pendulum.duration(minutes=5),
 }
 
 dag = DAG(
@@ -41,7 +41,7 @@ dag = DAG(
     default_args=default_args,
     description='Read DATADIS API every 60 minutes',
     schedule_interval='0 * * * *',  # Every 60 minutes
-    start_date=datetime(2026, 1, 18),
+    start_date=pendulum.datetime(2026, 1, 18, tz="Europe/Madrid"),
     catchup=False,
     tags=['datadis', 'api', 'monitoring'],
 )

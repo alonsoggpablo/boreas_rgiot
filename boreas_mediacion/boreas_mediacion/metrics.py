@@ -26,10 +26,10 @@ class PrometheusMiddleware:
 
 def metrics_view(request):
     # Families timeout
-    one_hour_ago = timezone.now() - timezone.timedelta(hours=1)
+    two_hours_ago = timezone.now() - timezone.timedelta(hours=2)
     families = MQTT_device_family.objects.all()
     for family in families:
-        last_msg = mqtt_msg.objects.filter(device_family=family, report_time__gte=one_hour_ago).order_by('-report_time').first()
+        last_msg = mqtt_msg.objects.filter(device_family=family, report_time__gte=two_hours_ago).order_by('-report_time').first()
         if not last_msg:
             FAMILY_TIMEOUT.labels(family=family.name).set(1)
         else:
@@ -48,24 +48,25 @@ def metrics_view(request):
                 MQTT_TOPIC_TIMEOUT.labels(topic=topic.topic).set(0)
 
     # API timeouts: Sigfox, WirelessLogic, Datadis
-    # Sigfox: device not seen in last hour
+    # Sigfox: device not seen in last 2 hours
     for device in SigfoxDevice.objects.all():
         last_seen = device.last_seen
-        if not last_seen or (timezone.now() - last_seen).total_seconds() > 3600:
+        if not last_seen or (timezone.now() - last_seen).total_seconds() > 7200:
             SIGFOX_DEVICE_TIMEOUT.labels(device_id=device.device_id).set(1)
         else:
             SIGFOX_DEVICE_TIMEOUT.labels(device_id=device.device_id).set(0)
 
     for sim in WirelessLogic_SIM.objects.all():
         last_sync = sim.last_sync
-        if not last_sync or (timezone.now() - last_sync).total_seconds() > 3600:
+        if not last_sync or (timezone.now() - last_sync).total_seconds() > 7200:
             WIRELESSLOGIC_SIM_TIMEOUT.labels(iccid=sim.iccid).set(1)
         else:
             WIRELESSLOGIC_SIM_TIMEOUT.labels(iccid=sim.iccid).set(0)
 
     for supply in DatadisSupply.objects.filter(active=True):
         last_sync = supply.raw_data.get('last_sync')
-        if not last_sync or (timezone.now() - timezone.datetime.fromisoformat(last_sync)).total_seconds() > 3600:
+        # Increase timeout to 2 hours (7200 seconds) to account for UTC/UTC+1 offset
+        if not last_sync or (timezone.now() - timezone.datetime.fromisoformat(last_sync)).total_seconds() > 7200:
             DATADIS_SUPPLY_TIMEOUT.labels(cups=supply.cups).set(1)
         else:
             DATADIS_SUPPLY_TIMEOUT.labels(cups=supply.cups).set(0)

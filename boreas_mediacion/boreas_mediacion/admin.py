@@ -10,8 +10,17 @@ import logging
 from .models import mqtt_msg, MQTT_device_family, MQTT_broker, MQTT_feed, sensor_command, sensor_actuacion, router_get, \
     router_parameter, reported_measure, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, \
     DatadisCredentials, DatadisSupply, SystemConfiguration
+
+# Register MQTT_device_family in admin
+@admin.register(MQTT_device_family)
+class MQTTDeviceFamilyAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name')
+    search_fields = ('name',)
 from .models import MQTT_topic
 admin.site.register(MQTT_topic)
+@admin.register(MQTT_broker)
+class MQTTBrokerAdmin(admin.ModelAdmin):
+    list_display = ('name', 'server', 'port', 'active')
 from .models import AemetStation, AemetData
 # --- AEMET API Models ---
 @admin.register(AemetStation)
@@ -408,6 +417,18 @@ class MQTTTopicAdmin(admin.ModelAdmin):
     list_display = ('topic', 'broker', 'family', 'qos', 'active', 'ro_rw', 'description')
     list_filter = ('broker', 'family', 'active', 'ro_rw', 'qos')
     search_fields = ('topic', 'description')
+
+    actions = ['activate_topics', 'deactivate_topics']
+
+    def activate_topics(self, request, queryset):
+        updated = queryset.update(active=True)
+        self.message_user(request, f"{updated} topic(s) activated.")
+    activate_topics.short_description = "Activate selected topics"
+
+    def deactivate_topics(self, request, queryset):
+        updated = queryset.update(active=False)
+        self.message_user(request, f"{updated} topic(s) deactivated.")
+    deactivate_topics.short_description = "Deactivate selected topics"
 
 admin.site.unregister(MQTT_topic)
 admin.site.register(MQTT_topic, MQTTTopicAdmin)
