@@ -28,24 +28,10 @@ services:
       - ./boreas_mediacion/management/commands:/app/boreas_mediacion/management/commands
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
       - TZ=Europe/Madrid
-      - DEBUG=True
-      - SECRET_KEY=your-secret-key-here-change-in-production
-      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,web,192.168.0.30,172.21.144.1,*
-      - DATABASE_URL=postgresql://boreas_user:boreas_password@db:5432/boreas_db
-      - EMAIL_HOST=mail.rggestionyenergia.com
-      - EMAIL_PORT=587
-      - EMAIL_HOST_USER=alonsogpablo@rggestionyenergia.com
-      - EMAIL_HOST_PASSWORD=neor9u9i9r7p
-      - EMAIL_USE_TLS=True
-      - DEFAULT_FROM_EMAIL=alonsogpablo@rggestionyenergia.com
-      - MQTT_SERVER=mqtt.solutions-iot.es
-      - MQTT_PORT=8883
-      - MQTT_USER=boreas
-      - MQTT_PASSWORD=RGIoT
-      - MQTT_TLS=True
-      - AEMET_API_KEY=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJwYWJsb0ByZ2dlc3Rpb255ZW5lcmdpYS5jb20iLCJqdGkiOiI2YjYwYjQwYS1jYjQwLTQwYjAtYjQwYS1jYjQwYjQwYjQwYjQifQ.1QwQbQwQbQwQbQwQbQwQbQwQbQwQbQwQbQwQbQwQbQwQbQw
     depends_on:
       db:
         condition: service_healthy
