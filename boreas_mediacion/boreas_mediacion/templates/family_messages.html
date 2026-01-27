@@ -178,6 +178,10 @@
                 <li><a href="/admin/">Admin</a></li>
                 <li><a href="/api/">API</a></li>
                 <li><a href="http://{{ airflow_host }}/" target="_blank">Airflow</a></li>
+                <li><a href="http://localhost:9090/alerts" target="_blank">Prometheus</a></li>
+                <li><a href="http://localhost:3000/dashboards" target="_blank">Grafana</a></li>
+                <li><a href="http://localhost:9093" target="_blank">Alertmanager</a></li>
+                <li><a href="/external-devices/">Boreas Bot Devices</a></li>
             </ul>
             <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
                 {% if user.is_authenticated %}
@@ -222,7 +226,7 @@
                                     <td><span class="family-name">{{ item.family.name }}</span></td>
                                     <td><span class="device-id">{{ item.device_id }}</span></td>
                                     <td><span class="time">{% if item.report_time %}{% timezone "Europe/Madrid" %}{{ item.report_time|date:"Y-m-d H:i:s" }}{% endtimezone %}{% else %}N/A{% endif %}</span></td>
-                                    <td><div class="measures">{{ item.measures|safe }}</div></td>
+                                    <td><div class="measures">{{ item.measures|safe|truncatechars:100 }}</div></td>
                                 </tr>
                                 {% endif %}
                             {% endfor %}
@@ -260,7 +264,7 @@
                                             {% elif item.source == 'datadis_supply' %}
                                                 Dirección: {{ item.measures.address|default:"N/A" }} | Distribuidor: {{ item.measures.distributor|default:"N/A" }} | Tipo Punto: {{ item.measures.point_type|default:"N/A" }}
                                             {% else %}
-                                                {{ item.measures|safe }}
+                                                {{ item.measures|safe|truncatechars:100 }}
                                             {% endif %}
                                         </div>
                                     </td>
@@ -310,31 +314,40 @@
                 // Parse the response
                 const parser = new DOMParser();
                 const newDoc = parser.parseFromString(html, 'text/html');
-                
-                // Update the table content
-                const oldTable = document.querySelector('table tbody');
-                const newTable = newDoc.querySelector('table tbody');
-                
-                if (oldTable && newTable) {
-                    oldTable.innerHTML = newTable.innerHTML;
+
+                // Update MQTT Reads table (first table)
+                const oldTables = document.querySelectorAll('.table-wrapper table');
+                const newTables = newDoc.querySelectorAll('.table-wrapper table');
+                if (oldTables.length > 0 && newTables.length > 0) {
+                    const oldMqttTbody = oldTables[0].querySelector('tbody');
+                    const newMqttTbody = newTables[0].querySelector('tbody');
+                    if (oldMqttTbody && newMqttTbody) {
+                        oldMqttTbody.innerHTML = newMqttTbody.innerHTML;
+                    }
                 }
-                
+                // Update API Reads table (second table)
+                if (oldTables.length > 1 && newTables.length > 1) {
+                    const oldApiTbody = oldTables[1].querySelector('tbody');
+                    const newApiTbody = newTables[1].querySelector('tbody');
+                    if (oldApiTbody && newApiTbody) {
+                        oldApiTbody.innerHTML = newApiTbody.innerHTML;
+                    }
+                }
+
                 // Update empty state if needed
                 const oldContent = document.querySelector('.content');
                 const newContent = newDoc.querySelector('.content');
-                
                 if (oldContent && newContent && newContent.querySelector('.empty-state')) {
                     oldContent.innerHTML = newContent.innerHTML;
                 }
-                
+
                 // Update stats
                 const oldStats = document.querySelector('.stats');
                 const newStats = newDoc.querySelector('.stats');
-                
                 if (oldStats && newStats) {
                     oldStats.innerHTML = newStats.innerHTML;
                 }
-                
+
                 // Update last updated time
                 const timestamp = new Date().toLocaleString('es-ES', {
                     year: 'numeric',

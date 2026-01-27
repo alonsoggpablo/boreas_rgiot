@@ -12,5 +12,19 @@
     "user": "boreas",
     "password": "RGIoT"
   }
+},
+{
+  "model": "boreas_mediacion.mqtt_broker",
+  "pk": 2,
+  "fields": {
+    "name": "shellies2",
+    "server": "mqtt.shellies.cloud",
+    "port": 1883,
+    "keepalive": 60,
+    "description": "broker for shellies2 MQTT",
+    "active": true,
+    "user": "",
+    "password": ""
+  }
 }
 ]

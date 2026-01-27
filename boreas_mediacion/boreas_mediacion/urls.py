@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include, re_path
+from boreas_bot import views as boreas_bot_views
 from django.views.generic import RedirectView
 from rest_framework import routers
 
@@ -37,11 +38,14 @@ urlpatterns = [
     path('api/', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('admin/', admin.site.urls),
+    path('metrics/', __import__('boreas_mediacion.metrics').metrics.metrics_view),
+    path('external-devices/', boreas_bot_views.devices_external_list, name='external_devices'),
     path('api/publish/', PublishView.as_view(), name='publish'),
     path('api/mqtt-control/', views.mqtt_control, name='mqtt_control'),
     path('api/sigfox', views.SigfoxCallbackView.as_view(), name='sigfox'),
     path('api/sigfox/gas', views.SigfoxCallbackView.as_view(), name='sigfox_gas'),
     re_path(r'^api/mqtt_msg-list/$', views.mqtt_msgViewList.as_view()),
     re_path(r'^api/reported_measure-list/$', views.reported_measureViewList.as_view()),
+    path('boreas-bot/devices/', boreas_bot_views.list_devices_tables, name='boreas_bot_devices'),
 ]
 

@@ -328,13 +328,10 @@ def family_last_messages(request):
     Supports filtering by family name and device_id.
     Shows ALL families, including those without messages.
     """
-    # Get all families with their last message
-    families = MQTT_device_family.objects.all()
+    # Get all families except 'aemet' for MQTT section
+    families = MQTT_device_family.objects.exclude(name__iexact='aemet')
     for family in families:
-        # Get the last message for this family
         last_msg = mqtt_msg.objects.filter(device_family=family).order_by('-report_time').first()
-        
-        # Include family even if no messages
         family_data.append({
             'source': 'mqtt',
             'family': family,
@@ -342,6 +339,18 @@ def family_last_messages(request):
             'device_id': last_msg.device_id if last_msg else 'N/A',
             'report_time': last_msg.report_time if last_msg else None,
             'measures': last_msg.measures if last_msg else 'No data',
+        })
+
+    # Add latest AEMET API read to API Reads section
+    from .models import AemetData
+    last_aemet = AemetData.objects.order_by('-timestamp').first()
+    if last_aemet:
+        family_data.append({
+            'source': 'aemet_api',
+            'family_name': 'AEMET',
+            'device_id': last_aemet.station.station_id,
+            'report_time': last_aemet.timestamp,
+            'measures': last_aemet.data,
         })
     
     # Add Sigfox data

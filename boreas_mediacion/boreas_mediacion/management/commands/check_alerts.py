@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from boreas_mediacion.alert_service import DiskSpaceAlertService, DeviceConnectionAlertService, AlertService
+## ALERT SERVICE REMOVED: All alerting is now handled by Prometheus metrics
 from boreas_mediacion.models import AlertRule
 from django.utils import timezone
 

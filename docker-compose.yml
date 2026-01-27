@@ -45,6 +45,7 @@ services:
       - MQTT_USER=boreas
       - MQTT_PASSWORD=RGIoT
       - MQTT_TLS=True
+      - AEMET_API_KEY=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJwYWJsb0ByZ2dlc3Rpb255ZW5lcmdpYS5jb20iLCJqdGkiOiI2YjYwYjQwYS1jYjQwLTQwYjAtYjQwYS1jYjQwYjQwYjQwYjQifQ.1QwQbQwQbQwQbQwQbQwQbQwQbQwQbQwQbQwQbQwQbQwQbQw
     depends_on:
       db:
         condition: service_healthy
@@ -74,6 +75,30 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  # boreas_bot: Django app service
+  # This service runs a Django app (boreas_bot) connected to an external PostgreSQL database.
+  # The connection details are loaded from .env (EXTERNAL_DB_* variables).
+  # The app code is mounted from ./boreas_mediacion and runs on port 8100.
+  # Adjust the image or build context as needed for your bot implementation.
+  boreas_bot:
+    build: .
+    container_name: boreas_bot
+    command: python manage.py runserver 0.0.0.0:8100
+    volumes:
+      - ./boreas_mediacion:/app
+    working_dir: /app
+    env_file:
+      - .env
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+    ports:
+      - "8100:8100"
+    depends_on:
+      - db
+    restart: unless-stopped
 
   nginx:
     image: nginx:alpine

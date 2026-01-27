@@ -9,7 +9,7 @@ import os
 sys.path.insert(0, '/app')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'boreas_mediacion.settings')
 
-from datetime import datetime, timedelta
+import pendulum
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 import subprocess
@@ -89,7 +89,7 @@ default_args = {
     'email_on_failure': True,
     'email_on_retry': False,
     'retries': 1,
-    'retry_delay': timedelta(minutes=1),
+    'retry_delay': pendulum.duration(minutes=1),
 }
 
 # Define the DAG
@@ -98,7 +98,7 @@ dag = DAG(
     default_args=default_args,
     description='Monitor AEMET weather data arrivals every 5 minutes',
     schedule_interval='*/5 * * * *',  # Every 5 minutes
-    start_date=datetime(2026, 1, 11),
+    start_date=pendulum.datetime(2026, 1, 11, tz="Europe/Madrid"),
     catchup=False,
     tags=['aemet', 'weather', 'monitoring', 'test'],
 )

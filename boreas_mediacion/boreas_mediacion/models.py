@@ -38,9 +38,31 @@ class reported_measure(models.Model):
     
     class Meta:
         unique_together = ['feed', 'device_id']  # Only one record per feed+device_id combination
-    
+
+# --- AEMET API Integration ---
+class AemetStation(models.Model):
+    station_id = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=100, blank=True, null=True)
+    province = models.CharField(max_length=100, blank=True, null=True)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
     def __str__(self):
-        return f"{self.feed}:{self.device_id}"
+        return f"{self.station_id} - {self.name or ''}"
+
+class AemetData(models.Model):
+    station = models.ForeignKey(AemetStation, on_delete=models.CASCADE, related_name='data')
+    timestamp = models.DateTimeField()
+    data = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['station', 'timestamp']
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"{self.station.station_id} @ {self.timestamp}"
 
 class MQTT_broker(models.Model):
     name=models.CharField(max_length=100, default='unknown')
@@ -296,96 +318,6 @@ class DatadisSupply(models.Model):
 
 
 
-# Alert and Monitoring System Models
-class AlertRule(models.Model):
-    """Regla de alerta para monitorización automática"""
-    
-    RULE_TYPES = [
-        ('disk_space', 'Disk Space'),
-        ('device_connection', 'Device Connection'),
-        ('aemet_data', 'AEMET Weather Data'),
-        ('topic_message_timeout', 'Topic Message Timeout'),
-        ('families_last_readings', 'Families Last Readings Summary'),
-        ('custom', 'Custom Check'),
-    ]
-    
-    NOTIFICATION_TYPES = [
-        ('email', 'Email'),
-        ('mqtt', 'MQTT'),
-    ]
-    
-    name = models.CharField(max_length=200, help_text="Nombre de la regla de alerta", default='')
-    rule_type = models.CharField(max_length=50, choices=RULE_TYPES, db_index=True, default='custom')
-    description = models.TextField(blank=True, null=True, default='')
-    
-    # Configuración de la regla
-    threshold = models.IntegerField(blank=True, null=True, help_text="Umbral para activar alerta (ej: 89 para 89% disco)")
-    check_interval_minutes = models.IntegerField(default=60, help_text="Intervalo de verificación en minutos")
-    
-    # Configuración específica (JSON flexible para diferentes tipos de reglas)
-    config = models.JSONField(default=dict, help_text="Configuración específica de la regla")
-    
-    # Notificaciones
-    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='email')
-    notification_recipients = models.TextField(help_text="Destinatarios separados por comas", default='')
-    notification_subject = models.CharField(max_length=500, blank=True, null=True, default='')
-    
-    # Estado
-    active = models.BooleanField(default=True)
-    
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    last_check = models.DateTimeField(blank=True, null=True)
-    
-    class Meta:
-        ordering = ['name']
-        verbose_name = "Alert Rule"
-        verbose_name_plural = "Alert Rules"
-    
-    def __str__(self):
-        return f"{self.name} ({self.get_rule_type_display()})"
-
-
-class Alert(models.Model):
-    """Instancia de alerta generada cuando se dispara una regla"""
-    
-    SEVERITY_LEVELS = [
-        ('info', 'Info'),
-        ('warning', 'Warning'),
-        ('error', 'Error'),
-        ('critical', 'Critical'),
-    ]
-    
-    STATUS_CHOICES = [
-        ('active', 'Active'),
-        ('acknowledged', 'Acknowledged'),
-        ('resolved', 'Resolved'),
-    ]
-    
-    rule = models.ForeignKey(AlertRule, on_delete=models.CASCADE, related_name='alerts', blank=True, null=True)
-    
-    # Detalles de la alerta
-    alert_type = models.CharField(max_length=50, db_index=True, default='general', blank=True)
-    severity = models.CharField(max_length=20, choices=SEVERITY_LEVELS, default='warning')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', db_index=True)
-    
-    # Mensaje y detalles
-    message = models.TextField(default='')
-    details = models.JSONField(default=dict, help_text="Detalles adicionales de la alerta")
-    
-    # Timestamps
-    triggered_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    acknowledged_at = models.DateTimeField(blank=True, null=True)
-    resolved_at = models.DateTimeField(blank=True, null=True)
-    
-    class Meta:
-        ordering = ['-triggered_at']
-        verbose_name = "Alert"
-        verbose_name_plural = "Alerts"
-    
-    def __str__(self):
-        return f"[{self.severity.upper()}] {self.alert_type} - {self.triggered_at.strftime('%Y-%m-%d %H:%M')}"
 
 
 

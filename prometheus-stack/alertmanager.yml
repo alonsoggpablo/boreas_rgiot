@@ -1,0 +1,19 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: 'email-hourly'
+  group_by: ['alertname']
+  group_wait: 30s
+  group_interval: 1h
+  repeat_interval: 2h
+
+receivers:
+  - name: 'email-hourly'
+    email_configs:
+      - to: 'alonsogpablo@rggestionyenergia.com'
+        from: 'alonsogpablo@rggestionyenergia.com'
+        smarthost: 'mail.rggestionyenergia.com:587'
+        auth_username: 'alonsogpablo@rggestionyenergia.com'
+        auth_password: 'neor9u9i9r7p'
+        require_tls: true

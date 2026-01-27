@@ -3,7 +3,7 @@ Airflow DAG to read SIGFOX API every 60 minutes
 """
 import sys
 import os
-from datetime import datetime, timedelta
+import pendulum
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
@@ -18,13 +18,14 @@ def read_sigfox_api():
     django.setup()
     from boreas_mediacion.models import SigfoxDevice, SigfoxReading
     from django.utils import timezone
+    import pendulum
     # Set your credentials here
     usr = "rgiot"
     pwd = "rgiot"
     # Example device and data (replace with real logic if needed)
     device_id = "auto_sigfox_dag"
     data_hex = "102d0501f40f"
-    ts = int(timezone.now().timestamp())
+    ts = int(pendulum.now('Europe/Madrid').timestamp())
     url = "http://web:8000/api/sigfox"
     headers = {
         "Content-Type": "application/json",
@@ -41,11 +42,7 @@ def read_sigfox_api():
     # Save to DB directly (in addition to API call)
     try:
         from django.utils import timezone
-        ts_dt = timezone.now()
-        if ts:
-            from datetime import datetime
-            import pytz
-            ts_dt = datetime.fromtimestamp(int(ts), tz=pytz.UTC)
+        ts_dt = pendulum.from_timestamp(ts, tz='Europe/Madrid')
         fw = data_hex[0:1] if data_hex else None
         temp = hum = co2 = base = None
         try:
@@ -79,10 +76,11 @@ def read_sigfox_api():
         print(f"SIGFOX API: Error saving to DB: {e}")
     print("SIGFOX API read and save completed.")
 
+
 default_args = {
     'owner': 'boreas',
     'retries': 1,
-    'retry_delay': timedelta(minutes=5),
+    'retry_delay': pendulum.duration(minutes=5),
 }
 
 dag = DAG(
@@ -90,7 +88,7 @@ dag = DAG(
     default_args=default_args,
     description='Read SIGFOX API every 60 minutes',
     schedule_interval='0 * * * *',  # Every 60 minutes
-    start_date=datetime(2026, 1, 18),
+    start_date=pendulum.datetime(2026, 1, 18, tz="Europe/Madrid"),
     catchup=False,
     tags=['sigfox', 'api', 'monitoring'],
 )

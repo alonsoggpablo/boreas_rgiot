@@ -1,0 +1,122 @@
+[
+    {
+        "model": "boreas_mediacion.aemetstation",
+        "pk": 1,
+        "fields": {
+            "station_id": "1207U",
+            "name": "GIJÓN-CAMPUS",
+            "province": "Asturias1",
+            "active": true,
+            "created_at": "2026-01-27T00:00:00Z",
+            "updated_at": "2026-01-27T00:00:00Z"
+        }
+    },
+    {
+        "model": "boreas_mediacion.aemetstation",
+        "pk": 2,
+        "fields": {
+            "station_id": "6000A",
+            "name": "MELILLA",
+            "province": "Melilla",
+            "active": true,
+            "created_at": "2026-01-27T00:00:00Z",
+            "updated_at": "2026-01-27T00:00:00Z"
+        }
+    },
+    {
+        "model": "boreas_mediacion.aemetstation",
+        "pk": 3,
+        "fields": {
+            "station_id": "9091R",
+            "name": "VITORIA-GASTEIZ AEROPUERTO",
+            "province": "Alava",
+            "active": true,
+            "created_at": "2026-01-27T00:00:00Z",
+            "updated_at": "2026-01-27T00:00:00Z"
+        }
+    },
+    {
+        "model": "boreas_mediacion.aemetstation",
+        "pk": 4,
+        "fields": {
+            "station_id": "8175",
+            "name": "ALBACETE/LOS LLANOS",
+            "province": "Albacete",
+            "active": true,
+            "created_at": "2026-01-27T00:00:00Z",
+            "updated_at": "2026-01-27T00:00:00Z"
+        }
+    },
+    {
+        "model": "boreas_mediacion.aemetstation",
+        "pk": 5,
+        "fields": {
+            "station_id": "8025",
+            "name": "ALICANTE",
+            "province": "Alicante",
+            "active": true,
+            "created_at": "2026-01-27T00:00:00Z",
+            "updated_at": "2026-01-27T00:00:00Z"
+        }
+    },
+    {
+        "model": "boreas_mediacion.aemetstation",
+        "pk": 6,
+        "fields": {
+            "station_id": "6325O",
+            "name": "ALMERÍA/AEROPUERTO",
+            "province": "Almeria",
+            "active": true,
+            "created_at": "2026-01-27T00:00:00Z",
+            "updated_at": "2026-01-27T00:00:00Z"
+        }
+    },
+    {
+        "model": "boreas_mediacion.aemetstation",
+        "pk": 7,
+        "fields": {
+            "station_id": "2444",
+            "name": "ÁVILA",
+            "province": "Avila",
+            "active": true,
+            "created_at": "2026-01-27T00:00:00Z",
+            "updated_at": "2026-01-27T00:00:00Z"
+        }
+    },
+    {
+        "model": "boreas_mediacion.aemetstation",
+        "pk": 8,
+        "fields": {
+            "station_id": "2331",
+            "name": "BURGOS/VILLAFRÍA",
+            "province": "Burgos",
+            "active": true,
+            "created_at": "2026-01-27T00:00:00Z",
+            "updated_at": "2026-01-27T00:00:00Z"
+        }
+    },
+    {
+        "model": "boreas_mediacion.aemetstation",
+        "pk": 9,
+        "fields": {
+            "station_id": "3469A",
+            "name": "CÁCERES",
+            "province": "Caceres",
+            "active": true,
+            "created_at": "2026-01-27T00:00:00Z",
+            "updated_at": "2026-01-27T00:00:00Z"
+        }
+    },
+    {
+        "model": "boreas_mediacion.aemetstation",
+        "pk": 10,
+        "fields": {
+            "station_id": "0076",
+            "name": "BARCELONA  AEROPUERTO",
+            "province": "Barcelona",
+            "active": true,
+            "created_at": "2026-01-27T00:00:00Z",
+            "updated_at": "2026-01-27T00:00:00Z"
+        }
+    }
+]
