@@ -12,33 +12,34 @@ from django.utils import timezone
 from django.shortcuts import render
 from django.db.models import Max
 from django.views.generic import ListView
+from .models import MQTT_topic
+from rest_framework.decorators import api_view
 
-from .models import mqtt_msg, reported_measure, MQTT_broker, MQTT_tx, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, MQTT_device_family
+from rest_framework.permissions import AllowAny
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def active_mqtt_topics(request):
+    """Return all active MQTT topics and their QoS as JSON for the Go client."""
+    topics = MQTT_topic.objects.filter(active=True)
+    data = [{
+        'topic': t.topic,
+        'qos': t.qos
+    } for t in topics]
+    return Response(data)
+from .models import reported_measure, MQTT_broker, MQTT_tx, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, MQTT_device_family
 # from .mqtt import client as mqtt_client
-from .serializers import (mqtt_msgSerializer, reported_measureSerializer, MQTT_tx_serializer,
+from .serializers import (reported_measureSerializer, MQTT_tx_serializer,
                           WirelessLogic_SIMSerializer, WirelessLogic_SIMListSerializer, 
                           WirelessLogic_UsageSerializer, SigfoxDeviceSerializer, SigfoxReadingSerializer)
 from django_filters.rest_framework import DjangoFilterBackend
 from django_filters.rest_framework import filters
-from . import mqtt as mqtt_module
 from .wirelesslogic_service import WirelessLogicService
 from django.conf import settings
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 
-class mqtt_msgViewSet(viewsets.ModelViewSet):
-    serializer_class = mqtt_msgSerializer
-    permission_classes = [permissions.AllowAny]  # Permitir acceso público para testing
-    queryset = mqtt_msg.objects.all()
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['device_id']
 
-class mqtt_msgViewList(generics.ListAPIView):
-    queryset = mqtt_msg.objects.all()
-    serializer_class = mqtt_msgSerializer
-    permission_classes = [permissions.AllowAny]  # Permitir acceso público para testing
-    filter_backends=[DjangoFilterBackend]
-    filterset_fields=['device_id']
 
 class reported_measureViewList(generics.ListAPIView):
     queryset = reported_measure.objects.all()
@@ -105,16 +106,8 @@ class PublishView(APIView):
 def mqtt_control(request):
     """Control MQTT client: start, stop, or get status"""
     action = request.data.get('action', '')
-    
-    if action == 'start':
-        result = mqtt_module.start_mqtt_client()
-    elif action == 'stop':
-        result = mqtt_module.stop_mqtt_client()
-    elif action == 'status':
-        result = mqtt_module.get_mqtt_status()
-    else:
-        result = {"status": "error", "message": "Invalid action. Use 'start', 'stop', or 'status'"}
-    
+    # MQTT control is not available; .mqtt module has been removed.
+    result = {"status": "error", "message": "MQTT control is not available in this deployment."}
     return Response(result)
 
 

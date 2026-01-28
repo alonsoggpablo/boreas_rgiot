@@ -1,4 +1,8 @@
 
+networks:
+  boreas_net:
+    external: true
+
 services:
   db:
     image: postgres:15-alpine
@@ -16,6 +20,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - boreas_net
 
   web:
     build: .
@@ -55,26 +61,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - boreas_net
 
-  mqtt:
-    build: .
-    container_name: boreas_mqtt
-    command: python /app/mqtt_service.py
-    volumes:
-      - .:/app
-    environment:
-      - DEBUG=False
-      - SECRET_KEY=your-secret-key-here-change-in-production
-      - DATABASE_URL=postgresql://boreas_user:boreas_password@db:5432/boreas_db
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   # boreas_bot: Django app service
   # This service runs a Django app (boreas_bot) connected to an external PostgreSQL database.
@@ -112,6 +101,25 @@ services:
     depends_on:
       - web
     restart: unless-stopped
+    networks:
+      - boreas_net
+
+  go_mqtt:
+    build:
+      context: ./go_mqtt
+    container_name: go_mqtt
+    environment:
+      - MQTT_BROKER=${MQTT_BROKER:-mqtt.solutions-iot.es:8883}
+      - TOPIC_API_URL=${TOPIC_API_URL:-http://web:8000/api/active-topics/}
+      - PG_CONN=${PG_CONN:-host=db user=boreas_user password=boreas_password dbname=boreas_db sslmode=disable}
+      - MQTT_USERNAME=${MQTT_USERNAME}
+      - MQTT_PASSWORD=${MQTT_PASSWORD}
+    depends_on:
+      - db
+      - web
+    restart: unless-stopped
+    networks:
+      - boreas_net
 
 volumes:
   postgres_data:

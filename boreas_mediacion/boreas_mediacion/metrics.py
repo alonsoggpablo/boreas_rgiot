@@ -1,6 +1,6 @@
 from prometheus_client import Counter, Histogram, Gauge, generate_latest
 from prometheus_client import CollectorRegistry
-from .models import MQTT_device_family, mqtt_msg, MQTT_topic, TopicMessageTimeout, SigfoxDevice, SigfoxReading, WirelessLogic_SIM, DatadisSupply
+from .models import MQTT_device_family, MQTT_topic, TopicMessageTimeout, SigfoxDevice, SigfoxReading, WirelessLogic_SIM, DatadisSupply
 from django.utils import timezone
 from django.http import HttpResponse
 
@@ -29,7 +29,7 @@ def metrics_view(request):
     two_hours_ago = timezone.now() - timezone.timedelta(hours=2)
     families = MQTT_device_family.objects.all()
     for family in families:
-        last_msg = mqtt_msg.objects.filter(device_family=family, report_time__gte=two_hours_ago).order_by('-report_time').first()
+        last_msg = None  # mqtt_msg removed
         if not last_msg:
             FAMILY_TIMEOUT.labels(family=family.name).set(1)
         else:

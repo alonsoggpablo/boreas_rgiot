@@ -24,7 +24,6 @@ from . import views
 from .views import PublishView
 
 router = routers.DefaultRouter()
-router.register(r'mqtt_msgs', views.mqtt_msgViewSet)
 router.register(r'wirelesslogic/sims', views.WirelessLogic_SIMViewSet, basename='wirelesslogic-sim')
 router.register(r'wirelesslogic/usage', views.WirelessLogic_UsageViewSet, basename='wirelesslogic-usage')
 router.register(r'sigfox/devices', views.SigfoxDeviceViewSet, basename='sigfox-device')
@@ -38,13 +37,13 @@ urlpatterns = [
     path('api/', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('admin/', admin.site.urls),
+    path('api/mqtt/active-topics/', views.active_mqtt_topics, name='active_mqtt_topics'),
     path('metrics/', __import__('boreas_mediacion.metrics').metrics.metrics_view),
     path('external-devices/', boreas_bot_views.devices_external_list, name='external_devices'),
     path('api/publish/', PublishView.as_view(), name='publish'),
     path('api/mqtt-control/', views.mqtt_control, name='mqtt_control'),
     path('api/sigfox', views.SigfoxCallbackView.as_view(), name='sigfox'),
     path('api/sigfox/gas', views.SigfoxCallbackView.as_view(), name='sigfox_gas'),
-    re_path(r'^api/mqtt_msg-list/$', views.mqtt_msgViewList.as_view()),
     re_path(r'^api/reported_measure-list/$', views.reported_measureViewList.as_view()),
     path('boreas-bot/devices/', boreas_bot_views.list_devices_tables, name='boreas_bot_devices'),
 ]
