@@ -22,6 +22,8 @@ services:
     ports:
       - "9093:9093"
     restart: always
+    command:
+      - '--web.external-url=http://82.165.142.98:9093'
     networks:
       - boreas_rgiot_default
 
