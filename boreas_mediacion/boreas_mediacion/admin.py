@@ -3,12 +3,21 @@ from django.contrib import admin, messages
 from .models import MQTT_device_family, MQTT_broker, MQTT_feed, sensor_command, sensor_actuacion, router_get, \
     router_parameter, reported_measure, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, \
     DatadisCredentials, DatadisSupply, SystemConfiguration
+
+@admin.register(MQTT_device_family)
+class MQTTDeviceFamilyAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name')
 # Register reported_measure in admin
 @admin.register(reported_measure)
 class ReportedMeasureAdmin(admin.ModelAdmin):
-    list_display = ('device_id', 'device', 'measures', 'feed', 'report_time')
-    list_filter = ('feed', 'report_time', 'device_id')
+    list_display = ('device_id', 'device', 'measures', 'feed', 'family', 'report_time')
+    list_filter = ('device_family_id', 'report_time')
     search_fields = ('device_id', 'device', 'measures', 'report_time')
+
+    def family(self, obj):
+        return obj.device_family_id.name if obj.device_family_id else None
+    family.admin_order_field = 'device_family_id'
+    family.short_description = 'Family'
 # ====================
 #   MQTT READS
 # ====================

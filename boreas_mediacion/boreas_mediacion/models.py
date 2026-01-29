@@ -13,11 +13,12 @@ class MQTT_device_family(models.Model):
 
 
 class reported_measure(models.Model):
-    report_time=models.DateTimeField(auto_now=True)
-    device=models.JSONField(default=dict)
-    device_id=models.CharField(max_length=100, default='unknown')
-    measures=models.JSONField(default=dict)
-    feed=models.CharField(max_length=100, default='unknown')
+    report_time = models.DateTimeField(auto_now=True)
+    device = models.JSONField(default=dict)
+    device_id = models.CharField(max_length=100, default='unknown')
+    measures = models.JSONField(default=dict)
+    feed = models.CharField(max_length=100, default='unknown')
+    device_family_id = models.ForeignKey('MQTT_device_family', null=True, blank=True, on_delete=models.SET_NULL)
     
     class Meta:
         unique_together = ['feed', 'device_id']  # Only one record per feed+device_id combination

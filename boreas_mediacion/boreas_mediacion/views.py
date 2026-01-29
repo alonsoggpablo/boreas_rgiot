@@ -324,7 +324,7 @@ def family_last_messages(request):
     # Get all families except 'aemet' for MQTT section
     families = MQTT_device_family.objects.exclude(name__iexact='aemet')
     for family in families:
-        last_msg = mqtt_msg.objects.filter(device_family=family).order_by('-report_time').first()
+        last_msg = reported_measure.objects.filter(device_family_id=family.id).order_by('-report_time').first()
         family_data.append({
             'source': 'mqtt',
             'family': family,
@@ -396,7 +396,7 @@ def family_last_messages(request):
                                     x.get('family_name', '').lower()))
     
     # Calculate total messages
-    total_messages = mqtt_msg.objects.count()
+    total_messages = reported_measure.objects.count()
     
     # Get list of all data sources for filter
     all_sources = list(set([f.get('family').name if 'family' in f and f['family'] else 
