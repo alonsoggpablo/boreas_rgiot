@@ -2,6 +2,11 @@
 # Boreas full deployment script (now in project root)
 set -e
 
+
+# Ensure boreas_net network exists
+echo "🌐 Ensuring Docker network 'boreas_net' exists..."
+docker network create boreas_net || true
+
 # Pull latest code
 echo "📥 Pulling latest code..."
 git pull origin main
@@ -27,21 +32,46 @@ docker compose -f docker-compose.yml -f docker-compose.airflow.yml build
 docker compose -f prometheus-stack/docker-compose.yml build
 
 
+
 # Start database first (main and airflow)
 echo "🗄️  Starting database..."
 docker compose up -d db
 docker compose -f docker-compose.yml -f docker-compose.airflow.yml up -d db
-sleep 10
+
+# Wait for db container to be healthy
+echo "⏳ Waiting for db container to be healthy..."
+for i in {1..30}; do
+    status=$(docker inspect --format='{{.State.Health.Status}}' boreas_db 2>/dev/null || echo "starting")
+    if [ "$status" = "healthy" ]; then
+        echo "DB container is healthy."
+        break
+    fi
+    echo "Waiting for db... ($i)"
+    sleep 2
+done
 
 # Start Prometheus and Grafana stack
 echo "📊 Starting Prometheus and Grafana stack..."
 docker compose -f prometheus-stack/docker-compose.yml up -d
 
 
-# Start web and MQTT services (needed for management commands)
-echo "🟢 Starting web and MQTT services..."
-docker compose up -d web mqtt --remove-orphans
-docker compose -f docker-compose.yml -f docker-compose.airflow.yml up -d airflow-webserver airflow-scheduler --remove-orphans
+
+
+# Start web service before migrations to ensure network connectivity
+echo "🟢 Starting web service (for migrations)..."
+docker compose up -d web
+
+# Wait for web container to be healthy and networked
+echo "⏳ Waiting for web container to be healthy and networked..."
+for i in {1..30}; do
+    status=$(docker inspect --format='{{.State.Health.Status}}' boreas_app 2>/dev/null || echo "starting")
+    if [ "$status" = "healthy" ] || [ "$status" = "running" ]; then
+        echo "Web container is $status."
+        break
+    fi
+    echo "Waiting for web... ($i)"
+    sleep 2
+done
 
 # Start nginx proxy
 echo "🟢 Starting nginx proxy..."
@@ -64,9 +94,27 @@ echo "🔧 Fixing permissions for migrations directory (host, UID/GID 1000 for c
 sudo chown -R 1000:1000 boreas_mediacion/boreas_mediacion/migrations
 sudo chmod -R 775 boreas_mediacion/boreas_mediacion/migrations
 
-# Run makemigrations before migrate using correct path
-docker compose exec web python /app/boreas_mediacion/manage.py makemigrations
-docker compose exec web python /app/boreas_mediacion/manage.py migrate
+
+# Retry makemigrations and migrate until successful (max 15 attempts)
+for i in {1..15}; do
+    echo "Attempt $i: Running makemigrations..."
+    if docker compose exec web python /app/boreas_mediacion/manage.py makemigrations; then
+        echo "makemigrations succeeded."
+        break
+    fi
+    echo "makemigrations failed, retrying in 4s..."
+    sleep 4
+done
+
+for i in {1..15}; do
+    echo "Attempt $i: Running migrate..."
+    if docker compose exec web python /app/boreas_mediacion/manage.py migrate; then
+        echo "migrate succeeded."
+        break
+    fi
+    echo "migrate failed, retrying in 4s..."
+    sleep 4
+done
 
 echo "📦 Collecting static files..."
 docker compose exec web python /app/boreas_mediacion/manage.py collectstatic --noinput --clear
@@ -74,19 +122,24 @@ docker compose exec web python /app/boreas_mediacion/manage.py collectstatic --n
 
 # Load main fixtures in a single command
 echo "📦 Loading main fixtures..."
-docker compose exec web python boreas_mediacion/manage.py loaddata \
-    boreas_mediacion/fixtures/01_mqtt_device_families.json \
-    boreas_mediacion/fixtures/02_mqtt_brokers.json \
-    boreas_mediacion/fixtures/03_mqtt_topics.json \
-    boreas_mediacion/fixtures/04_sensor_actuaciones.json \
-    boreas_mediacion/fixtures/05_router_parameters.json \
-    boreas_mediacion/fixtures/06_datadis_credentials.json \
-    boreas_mediacion/fixtures/07_aemet.json
+for i in {1..15}; do
+    docker compose exec web python boreas_mediacion/manage.py loaddata \
+        boreas_mediacion/fixtures/01_mqtt_device_families.json \
+        boreas_mediacion/fixtures/02_mqtt_brokers.json \
+        boreas_mediacion/fixtures/03_mqtt_topics.json \
+        boreas_mediacion/fixtures/04_sensor_actuaciones.json \
+        boreas_mediacion/fixtures/05_router_parameters.json \
+        boreas_mediacion/fixtures/06_datadis_credentials.json \
+        boreas_mediacion/fixtures/07_aemet.json && {
+        echo "loaddata succeeded.";
+        break;
+    } || {
+        echo "loaddata failed, retrying in 4s...";
+        sleep 4;
+    }
+done
 
-# Restore alert rules for MQTT device families and API sources
-echo "🔔 Restoring alert rules for MQTT device families and API sources..."
-docker compose exec web python boreas_mediacion/manage.py setup_family_alerts
-docker compose exec web python boreas_mediacion/manage.py setup_api_alerts
+
 
 # Create superuser (automated)
 echo "👤 Creating superuser (if not exists)..."
@@ -97,11 +150,38 @@ else:
     print('Superuser already exists.')"
 
 
-# Start all services (main, airflow, prometheus-stack)
-echo "🚀 Starting all services..."
-docker compose up -d
-docker compose -f docker-compose.yml -f docker-compose.airflow.yml up -d
+
+# After migrations, start go_mqtt and Airflow services
+echo "🟢 Starting go_mqtt service..."
+docker compose up -d go_mqtt --remove-orphans
+
+echo "🟢 Starting Airflow services..."
+docker compose -f docker-compose.yml -f docker-compose.airflow.yml up -d airflow-webserver airflow-scheduler --remove-orphans
 docker compose -f prometheus-stack/docker-compose.yml up -d
+
+# Wait for Airflow webserver to be healthy
+echo "⏳ Waiting for Airflow webserver to be healthy..."
+for i in {1..30}; do
+    status=$(docker inspect --format='{{.State.Health.Status}}' boreas_airflow_web 2>/dev/null || echo "starting")
+    if [ "$status" = "healthy" ] || [ "$status" = "running" ]; then
+        echo "Airflow webserver is $status."
+        break
+    fi
+    echo "Waiting for Airflow webserver... ($i)"
+    sleep 2
+done
+
+# Wait for Airflow scheduler to be healthy
+echo "⏳ Waiting for Airflow scheduler to be healthy..."
+for i in {1..30}; do
+    status=$(docker inspect --format='{{.State.Health.Status}}' boreas_airflow_scheduler 2>/dev/null || echo "starting")
+    if [ "$status" = "healthy" ] || [ "$status" = "running" ]; then
+        echo "Airflow scheduler is $status."
+        break
+    fi
+    echo "Waiting for Airflow scheduler... ($i)"
+    sleep 2
+done
 
 # Remove old instructions file if unnecessary
 if [ -f INSTRUCCIONES_DESPLIEGUE.TXT ]; then

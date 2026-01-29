@@ -30,11 +30,12 @@ services:
   alertmanager:
     image: prom/alertmanager:latest
     volumes:
-      - ./alertmanager.yml:/alertmanager.yml
+      - /root/boreas_rgiot/prometheus-stack/alertmanager.yml:/etc/alertmanager/alertmanager.yml
     ports:
       - "9093:9093"
     restart: always
     command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
       - '--web.external-url=http://82.165.142.98:9093'
     networks:
       - boreas_rgiot_default
@@ -58,4 +59,5 @@ volumes:
 
 networks:
   boreas_rgiot_default:
+  boreas_net:
     external: true

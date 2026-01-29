@@ -21,7 +21,9 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - boreas_net
+      boreas_net:
+        aliases:
+          - db
 
   web:
     build: .
@@ -34,26 +36,9 @@ services:
       - ./boreas_mediacion/management/commands:/app/boreas_mediacion/management/commands
     ports:
       - "8000:8000"
-    env_file:
-      - .env
-    environment:
-      - TZ=Europe/Madrid
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    env_file: .env
     networks:
       - boreas_net
-
-
-  # boreas_bot: Django app service
-  # This service runs a Django app (boreas_bot) connected to an external PostgreSQL database.
-  # The connection details are loaded from .env (EXTERNAL_DB_* variables).
   # The app code is mounted from ./boreas_mediacion and runs on port 8100.
   # Adjust the image or build context as needed for your bot implementation.
   boreas_bot:
@@ -63,8 +48,7 @@ services:
     volumes:
       - ./boreas_mediacion:/app
     working_dir: /app
-    env_file:
-      - .env
+    env_file: .env
     environment:
       - DEBUG=False
       - SECRET_KEY=${SECRET_KEY}
