@@ -1,4 +1,9 @@
 
+
+networks:
+  boreas_net:
+    external: true
+
 volumes:
   postgres_data:
   static_volume:
@@ -21,6 +26,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - boreas_net
   # Airflow Webserver
   airflow-webserver:
     build:
@@ -53,11 +60,15 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - boreas_net
 
   airflow-scheduler:
     build:
       context: .
       dockerfile: Dockerfile.airflow
+    networks:
+      - boreas_net
     container_name: boreas_airflow_scheduler
     command: ["/opt/airflow/airflow-entrypoint.sh", "airflow", "scheduler"]
     env_file:

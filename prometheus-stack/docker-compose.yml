@@ -1,5 +1,17 @@
 version: '3.7'
 services:
+  go_mqtt:
+    build:
+      context: ../go_mqtt
+    environment:
+      - MQTT_BROKER=mqtt.solutions-iot.es
+      - MQTT_USERNAME=boreas
+      - MQTT_PASSWORD=RGIoT
+      - TOPIC_API_URL=http://web:8000/api/mqtt/active-topics/
+      - PG_CONN=postgres://boreas_user:boreas_password@db:5432/boreas_db?sslmode=disable
+    restart: always
+    networks:
+      - boreas_net
   prometheus:
     image: prom/prometheus:latest
     ports:
@@ -18,7 +30,7 @@ services:
   alertmanager:
     image: prom/alertmanager:latest
     volumes:
-      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - ./alertmanager.yml:/alertmanager.yml
     ports:
       - "9093:9093"
     restart: always

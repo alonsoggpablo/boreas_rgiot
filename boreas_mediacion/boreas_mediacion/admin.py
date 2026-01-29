@@ -1,21 +1,31 @@
+
+from django.contrib import admin, messages
+from .models import MQTT_device_family, MQTT_broker, MQTT_feed, sensor_command, sensor_actuacion, router_get, \
+    router_parameter, reported_measure, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, \
+    DatadisCredentials, DatadisSupply, SystemConfiguration
+
+@admin.register(MQTT_device_family)
+class MQTTDeviceFamilyAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name')
+# Register reported_measure in admin
+@admin.register(reported_measure)
+class ReportedMeasureAdmin(admin.ModelAdmin):
+    list_display = ('device_id', 'device', 'measures', 'feed', 'family', 'report_time')
+    list_filter = ('device_family_id', 'report_time')
+    search_fields = ('device_id', 'device', 'measures', 'report_time')
+
+    def family(self, obj):
+        return obj.device_family_id.name if obj.device_family_id else None
+    family.admin_order_field = 'device_family_id'
+    family.short_description = 'Family'
 # ====================
 #   MQTT READS
 # ====================
-from django.contrib import admin, messages
 from django.urls import reverse
 from django.utils.html import format_html
 from django.http import HttpResponseRedirect
 from django.utils import timezone
 import logging
-from .models import mqtt_msg, MQTT_device_family, MQTT_broker, MQTT_feed, sensor_command, sensor_actuacion, router_get, \
-    router_parameter, reported_measure, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, \
-    DatadisCredentials, DatadisSupply, SystemConfiguration
-
-# Register MQTT_device_family in admin
-@admin.register(MQTT_device_family)
-class MQTTDeviceFamilyAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name')
-    search_fields = ('name',)
 from .models import MQTT_topic
 admin.site.register(MQTT_topic)
 @admin.register(MQTT_broker)
@@ -46,22 +56,12 @@ class AemetDataAdmin(admin.ModelAdmin):
     list_display = ('station', 'timestamp', 'created_at')
     list_filter = ('station',)
     search_fields = ('station__station_id',)
-from . import mqtt as mqtt_module
 from .wirelesslogic_service import WirelessLogicService
 from .datadis_service import DatadisService
 
 from django.urls import reverse
 from django.utils.html import format_html
 
-class MQTT_MSG_Admin(admin.ModelAdmin):
-    class Meta:
-        app_label = 'MQTT READS'
-    list_display = ('device_id','device','measures','feed','device_family','report_time')
-    list_filter = ('feed','report_time','device_id','device_family')
-    search_fields = ('device_id','device','measures','report_time')
-
-admin.site.register(mqtt_msg, MQTT_MSG_Admin)
-#register router_parameter
 class router_parameter_Admin(admin.ModelAdmin):
     class Meta:
         app_label = 'MQTT READS'
@@ -83,51 +83,10 @@ class router_parameter_Admin(admin.ModelAdmin):
             pass
         return fw, temp, hum, co2, base
 
-    def create_test_reading(self, request, queryset):
-        sample_hex = '102d0501f40f'
-        created = 0
-        now = timezone.now()
 
-        for device in queryset:
-            fw, temp, hum, co2, base = self._parse_payload(sample_hex)
-            payload = {'device': device.device_id, 'data': sample_hex, 'timestamp': int(now.timestamp())}
 
-            SigfoxReading.objects.create(
-                device=device,
-                timestamp=now,
-                firmware=fw,
-                co2=co2,
-                temp=temp,
-                hum=hum,
-                base=base,
-                raw_data=payload
-            )
+admin.site.register(router_parameter, router_parameter_Admin)
 
-            device.firmware = fw or device.firmware
-            device.last_seen = now
-            device.last_payload = payload
-            device.last_co2 = co2
-            device.last_temp = temp
-            device.last_hum = hum
-            device.last_base = base
-            device.save(update_fields=['firmware', 'last_seen', 'last_payload', 'last_co2', 'last_temp', 'last_hum', 'last_base', 'updated_at'])
-            created += 1
-
-        self.message_user(request, f'Lecturas de prueba creadas para {created} dispositivo(s)', level=messages.SUCCESS)
-    create_test_reading.short_description = "⚙️ Crear lectura de prueba"
-
-    def show_recent_readings(self, request, queryset):
-        summaries = []
-        for device in queryset:
-            latest = device.readings.order_by('-timestamp').first()
-            if latest:
-                summaries.append(f"{device.device_id}: CO2={latest.co2}, temp={latest.temp}, hum={latest.hum} @ {latest.timestamp:%Y-%m-%d %H:%M}")
-            else:
-                summaries.append(f"{device.device_id}: sin lecturas")
-
-        msg = '; '.join(summaries[:10])  # limitar longitud del mensaje
-        self.message_user(request, msg, level=messages.INFO)
-    show_recent_readings.short_description = "👀 Ver últimas lecturas"
 
 
 @admin.register(SigfoxReading)

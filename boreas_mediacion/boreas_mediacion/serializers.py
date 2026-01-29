@@ -1,10 +1,7 @@
-from .models import mqtt_msg, reported_measure, MQTT_tx, sensor_command, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading
+from .models import reported_measure, MQTT_tx, sensor_command, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading
 from rest_framework import serializers
 
-class mqtt_msgSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = mqtt_msg
-        fields = ('id', 'report_time', 'device', 'device_id', 'measures', 'feed')
+
 
 class reported_measureSerializer(serializers.ModelSerializer):
     class Meta:
