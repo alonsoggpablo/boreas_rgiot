@@ -19,10 +19,13 @@ docker volume rm boreas_rgiot_postgres_data || true
 echo "🗑️ Removing all Django migration files..."
 find boreas_mediacion/boreas_mediacion/migrations -type f ! -name '__init__.py' -delete
 
-# Build containers (main and airflow)
+
+# Build containers (main, airflow, and prometheus-stack)
 echo "🔨 Building containers..."
 docker compose build
 docker compose -f docker-compose.yml -f docker-compose.airflow.yml build
+docker compose -f prometheus-stack/docker-compose.yml build
+
 
 # Start database first (main and airflow)
 echo "🗄️  Starting database..."
@@ -30,9 +33,14 @@ docker compose up -d db
 docker compose -f docker-compose.yml -f docker-compose.airflow.yml up -d db
 sleep 10
 
-# Start web service (needed for management commands)
-echo "🟢 Starting web service..."
-docker compose up -d web --remove-orphans
+# Start Prometheus and Grafana stack
+echo "📊 Starting Prometheus and Grafana stack..."
+docker compose -f prometheus-stack/docker-compose.yml up -d
+
+
+# Start web and MQTT services (needed for management commands)
+echo "🟢 Starting web and MQTT services..."
+docker compose up -d web mqtt --remove-orphans
 docker compose -f docker-compose.yml -f docker-compose.airflow.yml up -d airflow-webserver airflow-scheduler --remove-orphans
 
 # Start nginx proxy
@@ -88,10 +96,12 @@ if not User.objects.filter(username=username).exists():
 else:
     print('Superuser already exists.')"
 
-# Start all services (main and airflow)
+
+# Start all services (main, airflow, prometheus-stack)
 echo "🚀 Starting all services..."
 docker compose up -d
 docker compose -f docker-compose.yml -f docker-compose.airflow.yml up -d
+docker compose -f prometheus-stack/docker-compose.yml up -d
 
 # Remove old instructions file if unnecessary
 if [ -f INSTRUCCIONES_DESPLIEGUE.TXT ]; then
@@ -109,6 +119,10 @@ curl -I http://localhost/
 
 echo "🔎 Verifying Airflow access..."
 curl -I http://localhost:8080/
+
+
+echo "♻️  Reloading Airflow services..."
+sh reload_airflow.sh
 
 echo "✅ Deployment complete!"
 echo "Dashboard: http://localhost/"

@@ -35,7 +35,6 @@ services:
       - "9093:9093"
     restart: always
     command:
-      - '--config.file=/alertmanager.yml'
       - '--web.external-url=http://82.165.142.98:9093'
     networks:
       - boreas_rgiot_default
