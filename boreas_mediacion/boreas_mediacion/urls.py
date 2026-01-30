@@ -46,5 +46,6 @@ urlpatterns = [
     path('api/sigfox/gas', views.SigfoxCallbackView.as_view(), name='sigfox_gas'),
     re_path(r'^api/reported_measure-list/$', views.reported_measureViewList.as_view()),
     path('boreas-bot/devices/', boreas_bot_views.list_devices_tables, name='boreas_bot_devices'),
+    path('api/upload-mockup-file/', boreas_bot_views.upload_mockup_file, name='upload_mockup_file'),
 ]
 
