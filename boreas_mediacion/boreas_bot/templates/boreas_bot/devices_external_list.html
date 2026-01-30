@@ -193,26 +193,38 @@ function loadMockupFile() {
   container.innerHTML = '';
   if (!fileInput.files.length) return;
   var file = fileInput.files[0];
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      var data = JSON.parse(e.target.result);
-      if (!Array.isArray(data)) data = [data];
-      if (!data.length) { container.innerHTML = '<em>No data in file</em>'; return; }
-      var fields = Object.keys(data[0]);
+  var formData = new FormData();
+  formData.append('file', file);
+  fetch('/api/upload-mockup-file/', {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    credentials: 'same-origin'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'success') {
+      var jsonData = data.data;
+      if (!Array.isArray(jsonData)) jsonData = [jsonData];
+      if (!jsonData.length) { container.innerHTML = '<em>No data in file</em>'; return; }
+      var fields = Object.keys(jsonData[0]);
       var html = '<table style="width:100%; border-collapse:collapse;">';
       html += '<thead><tr>' + fields.map(f => `<th style=\"background:#f0f2f5; padding:10px 12px;\">${f}</th>`).join('') + '</tr></thead>';
       html += '<tbody>';
-      data.forEach(row => {
+      jsonData.forEach(row => {
         html += '<tr>' + fields.map(f => `<td style=\"padding:10px 12px;\">${row[f] ?? ''}</td>`).join('') + '</tr>';
       });
       html += '</tbody></table>';
       container.innerHTML = html;
-    } catch (err) {
-      container.innerHTML = '<span style="color:red;">Invalid JSON file</span>';
+    } else {
+      container.innerHTML = `<span style=\"color:red;\">${data.message || 'Upload failed'}</span>`;
     }
-  };
-  reader.readAsText(file);
+  })
+  .catch(() => {
+    container.innerHTML = '<span style="color:red;">Upload failed</span>';
+  });
 }
 
 // Table filtering by any field
