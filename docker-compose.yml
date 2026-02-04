@@ -5,7 +5,7 @@ networks:
 
 services:
   db:
-    image: postgres:15-alpine
+    image: timescale/timescaledb:2.13.1-pg15
     container_name: boreas_db
     environment:
       POSTGRES_DB: boreas_db

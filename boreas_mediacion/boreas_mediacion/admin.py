@@ -69,9 +69,9 @@ class DeviceClientFilter(SimpleListFilter):
 # Register reported_measure in admin
 @admin.register(reported_measure)
 class ReportedMeasureAdmin(admin.ModelAdmin):
-    list_display = ('device_id', 'device', 'measures', 'nanoenvi_name', 'nanoenvi_client', 'family', 'report_time')
+    list_display = ('device_id', 'feed', 'measures', 'nanoenvi_name', 'nanoenvi_client', 'family', 'report_time')
     list_filter = ('device_family_id', 'nanoenvi_client', 'report_time')
-    search_fields = ('device_id', 'device', 'measures', 'report_time', 'nanoenvi_uuid', 'nanoenvi_name', 'nanoenvi_client')
+    search_fields = ('device_id', 'feed', 'measures', 'report_time', 'nanoenvi_uuid', 'nanoenvi_name', 'nanoenvi_client')
 
     def family(self, obj):
         return obj.device_family_id.name if obj.device_family_id else None

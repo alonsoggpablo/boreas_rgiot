@@ -52,8 +52,10 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana_prometheus_datasource.yaml:/etc/grafana/provisioning/datasources/prometheus.yaml
+      - ./grafana_postgres_datasource.yaml:/etc/grafana/provisioning/datasources/postgres.yaml
     networks:
       - boreas_rgiot_default
+      - boreas_net
 
 
 volumes:

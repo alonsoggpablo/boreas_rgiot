@@ -13,19 +13,21 @@ class MQTT_device_family(models.Model):
 
 
 class reported_measure(models.Model):
-    report_time = models.DateTimeField(auto_now=True)
+    report_time = models.DateTimeField(auto_now_add=True, db_index=True)
     device = models.JSONField(default=dict)
-    device_id = models.CharField(max_length=100, default='unknown')
+    device_id = models.CharField(max_length=100, default='unknown', db_index=True)
     measures = models.JSONField(default=dict)
-    feed = models.CharField(max_length=100, default='unknown')
+    feed = models.CharField(max_length=100, default='unknown', db_index=True)
     device_family_id = models.ForeignKey('MQTT_device_family', null=True, blank=True, on_delete=models.SET_NULL)
     # Link to external DevicesNANOENVI table
     nanoenvi_uuid = models.CharField(max_length=255, null=True, blank=True, help_text='UUID from devicesNANOENVI table')
     nanoenvi_name = models.CharField(max_length=255, null=True, blank=True, help_text='Device name from devicesNANOENVI')
     nanoenvi_client = models.CharField(max_length=255, null=True, blank=True, help_text='Client from devicesNANOENVI')
-    
+
     class Meta:
-        unique_together = ['feed', 'device_id']  # Only one record per feed+device_id combination
+        indexes = [
+            models.Index(fields=['device_id', 'feed', 'report_time']),
+        ]
 
 # --- External Device Monitoring ---
 class DeviceMonitoring(models.Model):

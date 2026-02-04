@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-04T11:00:02.435497Z",
+  "generated_at": "2026-02-04T16:00:03.358092Z",
   "count": 454,
   "devices": {
     "94e5efed-bb9e-4dc1-9177-a7fedc53fcf6": {
@@ -2072,6 +2072,16 @@
       "client": null,
       "source": "shellies"
     },
+    "shellyem3-BCFF4DFD1D53": {
+      "name": "CONSH3S048",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-E89F6D8492FD": {
+      "name": "CONSH3S039",
+      "client": null,
+      "source": "shellies"
+    },
     "shellyem3-BCFF4DFD1CCA": {
       "name": "CONSH3S005",
       "client": null,
@@ -2094,11 +2104,6 @@
     },
     "shellyem3-E89F6D849959": {
       "name": "CONSH3S018",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-BCFF4DFD1D53": {
-      "name": "CONSH3S048",
       "client": null,
       "source": "shellies"
     },
@@ -2129,11 +2134,6 @@
     },
     "shellyem3-BCFF4DFD1BF2": {
       "name": "CONSH3S031",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-E89F6D8492FD": {
-      "name": "CONSH3S039",
       "client": null,
       "source": "shellies"
     },
@@ -2207,6 +2207,11 @@
       "client": null,
       "source": "shellies"
     },
+    "shellyem3-C45BBE6B1778": {
+      "name": "SHE0005.- DEMO",
+      "client": null,
+      "source": "shellies"
+    },
     "shellyem3-E89F6D84A857": {
       "name": "CONSH3S013",
       "client": null,
@@ -2214,11 +2219,6 @@
     },
     "shellyem3-E89F6D84A55A": {
       "name": "CONSH3S066",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-C45BBE6B1778": {
-      "name": "SHE0005.- DEMO",
       "client": null,
       "source": "shellies"
     },

@@ -151,10 +151,7 @@ func (w *DBWriter) UpsertReportedMeasure(topic, deviceID, payload string) error 
 	query := `INSERT INTO boreas_mediacion_reported_measure (
 			feed, device_id, device, measures, report_time, device_family_id_id,
 			nanoenvi_uuid, nanoenvi_name, nanoenvi_client
-		) VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8)
-		ON CONFLICT (feed, device_id)
-		DO UPDATE SET device = $3, measures = $4, report_time = NOW(), device_family_id_id = $5,
-			nanoenvi_uuid = $6, nanoenvi_name = $7, nanoenvi_client = $8;`
+		) VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8);`
 	_, err := w.db.ExecContext(ctx, query, topic, deviceID, deviceJSON, payload, familyID, nanoUUID, nanoName, nanoClient)
 	return err
 }
