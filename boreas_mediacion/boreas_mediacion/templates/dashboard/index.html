@@ -131,7 +131,7 @@
         </a>
         
         <!-- Airflow Scheduler Card -->
-        <a href="http://{{ airflow_host }}/" target="_blank" class="dashboard-card">
+        <a href="http://{% if airflow_host %}{{ airflow_host }}{% else %}localhost:8080{% endif %}/" target="_blank" class="dashboard-card">
             <div>
                 <div class="card-icon">🔄</div>
                 <div class="card-title">Airflow</div>

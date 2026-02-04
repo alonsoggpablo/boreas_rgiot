@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.shortcuts import render
 from django.db.models import Max, F
 from django.views.generic import ListView, TemplateView
+from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import MQTT_topic
 from rest_framework.decorators import api_view
 
@@ -41,13 +42,24 @@ from rest_framework.permissions import IsAuthenticated
 
 
 # Dashboard Index View
-class DashboardIndexView(TemplateView):
+class DashboardIndexView(LoginRequiredMixin, TemplateView):
     template_name = 'dashboard/index.html'
+    login_url = '/admin/login/'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Get the hostname from the request
+        http_host = self.request.META.get('HTTP_HOST', 'localhost:8000')
+        # Extract hostname without port
+        hostname = http_host.rsplit(':', 1)[0] if ':' in http_host else http_host
+        context['airflow_host'] = f'{hostname}:8080'
+        return context
 
 
 # Device Last Reads Dashboard
-class DeviceLastReadsView(TemplateView):
+class DeviceLastReadsView(LoginRequiredMixin, TemplateView):
     template_name = 'dashboard/device_last_reads.html'
+    login_url = '/admin/login/'
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
