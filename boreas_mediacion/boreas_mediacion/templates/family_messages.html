@@ -1,77 +1,10 @@
+{% extends "dashboard/base.html" %}
 {% load tz %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IoT Solutions</title>
-    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
-    <link rel="icon" href="/static/favicon.webp" type="image/webp">
-    <link rel="apple-touch-icon" href="/static/favicon.webp" type="image/webp">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: #ffffff;
-            color: #000000;
-            min-height: 100vh;
-        }
-        /* Navbar */
-        nav {
-            background: #000000;
-            padding: 0;
-            margin: 0;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-        nav .navbar-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 20px;
-            height: 60px;
-        }
-        nav .navbar-brand {
-            color: #ffffff;
-            font-weight: 700;
-            font-size: 18px;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        nav .navbar-brand:hover {
-            color: #dcdcdc;
-        }
-        nav ul {
-            display: flex;
-            list-style: none;
-            gap: 0;
-            margin: 0;
-            padding: 0;
-        }
-        nav li { margin: 0; }
-        nav a {
-            color: #ffffff;
-            text-decoration: none;
-            padding: 20px 18px;
-            display: block;
-            transition: all 0.2s;
-            font-size: 14px;
-            font-weight: 500;
-        }
-        nav a:hover { background: #222222; color: #ffffff; }
-        nav a.active { background: #333333; color: #ffffff; }
-        .page-content { padding: 20px; }
-        .container {
+
+{% block title %}Family Reads - Boreas Dashboard{% endblock %}
+
+{% block extra_css %}
+        .family-container {
             max-width: 1200px;
             margin: 0 auto;
             background: #ffffff;
@@ -87,7 +20,7 @@
             border-bottom: 1px solid #e9ecef;
         }
         .header h1 { font-size: 28px; margin-bottom: 0; }
-        .content { padding: 30px; background: #ffffff; color: #000000; }
+        .family-content { padding: 30px; background: #ffffff; color: #000000; }
         .table-wrapper { overflow-x: auto; }
         table {
             width: 100%;
@@ -112,6 +45,19 @@
             color: #000000;
         }
         tbody tr:hover { background: #f5f5f5; }
+        .row-stale {
+            background-color: #fff3cd !important;
+        }
+        .row-stale:hover {
+            background-color: #ffe69c !important;
+        }
+        .stale-indicator {
+            color: #856404;
+            font-weight: bold;
+            font-size: 0.8em;
+            display: block;
+            margin-top: 3px;
+        }
         .family-name { font-weight: 700; color: #000000; }
         .device-id {
             display: inline-block;
@@ -165,37 +111,10 @@
             nav a { padding: 12px 10px; }
         }
     </style>
-</head>
-<body>
-    <!-- Navigation Bar -->
-    <nav>
-        <div class="navbar-container">
-            <a href="/dashboard/family-messages/" class="navbar-brand">
-                <span>🌍</span> Boreas Dashboard
-            </a>
-            <ul>
-                <li><a href="/dashboard/family-messages/" class="active">Dashboard</a></li>
-                <li><a href="/admin/">Admin</a></li>
-                <li><a href="/api/">API</a></li>
-                <li><a href="http://{{ airflow_host }}/" target="_blank">Airflow</a></li>
-                <li><a href="http://82.165.142.98:9090/alerts" target="_blank">Prometheus</a></li>
-                <li><a href="http://localhost:3000/dashboards" target="_blank">Grafana</a></li>
-                <li><a href="http://82.165.142.98:9093" target="_blank">Alertmanager</a></li>
-                <li><a href="/external-devices/">Boreas Bot Devices</a></li>
-            </ul>
-            <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
-                {% if user.is_authenticated %}
-                    <span style="color:#fff;">👤 {{ user.username }}</span>
-                    <a href="/accounts/logout/" style="color:#fff;">Logout</a>
-                {% else %}
-                    <a href="/accounts/login/" style="color:#fff;">Login</a>
-                {% endif %}
-            </div>
-        </div>
-    </nav>
+{% endblock %}
 
-    <div class="page-content">
-        <div class="container">
+{% block content %}
+        <div class="family-container">
         <!-- Filters moved into table header -->
 
         <div class="content">
@@ -222,10 +141,13 @@
                         <tbody>
                             {% for item in family_data %}
                                 {% if item.source == 'mqtt' %}
-                                <tr>
+                                <tr data-timestamp="{% if item.report_time %}{% timezone 'Europe/Madrid' %}{{ item.report_time|date:'c' }}{% endtimezone %}{% endif %}">
                                     <td><span class="family-name">{{ item.family.name }}</span></td>
                                     <td><span class="device-id">{{ item.device_id }}</span></td>
-                                    <td><span class="time">{% if item.report_time %}{% timezone "Europe/Madrid" %}{{ item.report_time|date:"Y-m-d H:i:s" }}{% endtimezone %}{% else %}N/A{% endif %}</span></td>
+                                    <td>
+                                        <span class="time">{% if item.report_time %}{% timezone "Europe/Madrid" %}{{ item.report_time|date:"Y-m-d H:i:s" }}{% endtimezone %}{% else %}N/A{% endif %}</span>
+                                        <span class="stale-indicator" style="display:none;"></span>
+                                    </td>
                                     <td><div class="measures">{{ item.measures|safe|truncatechars:100 }}</div></td>
                                 </tr>
                                 {% endif %}
@@ -247,10 +169,13 @@
                         <tbody>
                             {% for item in family_data %}
                                 {% if item.source != 'mqtt' %}
-                                <tr>
+                                <tr data-timestamp="{% if item.report_time %}{% timezone 'Europe/Madrid' %}{{ item.report_time|date:'c' }}{% endtimezone %}{% endif %}">
                                     <td><span class="family-name">{{ item.family_name }}</span></td>
                                     <td><span class="device-id">{{ item.device_id }}</span></td>
-                                    <td><span class="time">{% if item.report_time %}{% timezone "Europe/Madrid" %}{{ item.report_time|date:"Y-m-d H:i:s" }}{% endtimezone %}{% else %}N/A{% endif %}</span></td>
+                                    <td>
+                                        <span class="time">{% if item.report_time %}{% timezone "Europe/Madrid" %}{{ item.report_time|date:"Y-m-d H:i:s" }}{% endtimezone %}{% else %}N/A{% endif %}</span>
+                                        <span class="stale-indicator" style="display:none;"></span>
+                                    </td>
                                     <td>
                                         <div class="measures">
                                             {% if item.source == 'sigfox' %}
@@ -294,6 +219,33 @@
     <script>
     // Auto-refresh the dashboard every 5 seconds
     const REFRESH_INTERVAL = 5000; // 5 seconds in milliseconds
+    const ONE_HOUR_MS = 60 * 60 * 1000; // 1 hour in milliseconds
+
+    function highlightStaleRows() {
+        const rows = document.querySelectorAll('table tbody tr[data-timestamp]');
+        const now = new Date();
+        
+        rows.forEach(row => {
+            const timestamp = new Date(row.dataset.timestamp);
+            const ageMs = now - timestamp;
+            const staleIndicator = row.querySelector('.stale-indicator');
+            
+            if (ageMs > ONE_HOUR_MS) {
+                // More than 1 hour old - highlight in orange
+                row.classList.add('row-stale');
+                if (staleIndicator) {
+                    staleIndicator.textContent = '⚠ Stale (> 1h)';
+                    staleIndicator.style.display = 'block';
+                }
+            } else {
+                // Less than 1 hour old - remove highlight
+                row.classList.remove('row-stale');
+                if (staleIndicator) {
+                    staleIndicator.style.display = 'none';
+                }
+            }
+        });
+    }
     
     function refreshDashboard() {
         // Get current family filter value
@@ -347,6 +299,9 @@
                 if (oldStats && newStats) {
                     oldStats.innerHTML = newStats.innerHTML;
                 }
+                
+                // Re-apply stale row highlighting after update
+                highlightStaleRows();
 
                 // Update last updated time
                 const timestamp = new Date().toLocaleString('es-ES', {
@@ -364,6 +319,12 @@
     
     // Start auto-refresh when page loads and when filter changes
     document.addEventListener('DOMContentLoaded', function() {
+        // Highlight stale rows immediately on page load
+        highlightStaleRows();
+        
+        // Check for stale rows every 30 seconds (more frequently than full refresh)
+        setInterval(highlightStaleRows, 30000);
+        
         const familySelect = document.getElementById('family_filter');
         if (familySelect) {
             familySelect.addEventListener('change', function() {
@@ -375,5 +336,6 @@
         setInterval(refreshDashboard, REFRESH_INTERVAL);
     });
     </script>
-</body>
-</html>
+        </div>
+    </div>
+{% endblock %}

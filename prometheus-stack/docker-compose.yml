@@ -32,7 +32,7 @@ services:
   alertmanager:
     image: prom/alertmanager:latest
     volumes:
-      - /root/boreas_rgiot/prometheus-stack/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
     ports:
       - "9093:9093"
     restart: always

@@ -21,7 +21,7 @@ from django.views.generic import RedirectView
 from rest_framework import routers
 
 from . import views
-from .views import PublishView
+from .views import PublishView, DeviceLastReadsView, DashboardIndexView
 
 router = routers.DefaultRouter()
 router.register(r'wirelesslogic/sims', views.WirelessLogic_SIMViewSet, basename='wirelesslogic-sim')
@@ -31,8 +31,10 @@ router.register(r'sigfox/readings', views.SigfoxReadingViewSet, basename='sigfox
 
 
 urlpatterns = [
-    path('', RedirectView.as_view(url='/dashboard/family-messages/', permanent=False)),
+    path('', RedirectView.as_view(url='/dashboard/', permanent=False)),
+    path('dashboard/', DashboardIndexView.as_view(), name='dashboard_index'),
     path('dashboard/family-messages/', views.family_last_messages, name='family_messages'),
+    path('dashboard/device-last-reads/', DeviceLastReadsView.as_view(), name='device_last_reads'),
     path('accounts/', include('django.contrib.auth.urls')),  # Django login/logout
     path('api/', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),

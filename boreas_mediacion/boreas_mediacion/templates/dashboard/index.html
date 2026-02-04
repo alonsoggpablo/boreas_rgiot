@@ -1,0 +1,173 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Dashboard - Boreas IoT Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-top: 30px;
+    }
+    .dashboard-card {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .dashboard-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .card-icon {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+    }
+    .card-title {
+        font-size: 1.3em;
+        font-weight: bold;
+        margin-bottom: 8px;
+        color: #333;
+    }
+    .card-description {
+        font-size: 0.9em;
+        color: #666;
+        line-height: 1.5;
+    }
+    .intro-text {
+        background: #f8f9fa;
+        border-left: 4px solid #007bff;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 30px;
+        color: #555;
+        line-height: 1.6;
+    }
+    h1 {
+        color: #333;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+    .stat-box {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+    }
+    .stat-number {
+        font-size: 2em;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .stat-label {
+        font-size: 0.9em;
+        opacity: 0.9;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <h1>Boreas IoT Dashboard</h1>
+    
+    <div class="intro-text">
+        <strong>Welcome to Boreas Dashboard!</strong> Monitor your IoT devices, view family-level metrics, and manage your connected infrastructure from this central hub.
+    </div>
+    
+    <div class="dashboard-grid">
+        <!-- Family Reads Card -->
+        <a href="/dashboard/family-messages/" class="dashboard-card">
+            <div>
+                <div class="card-icon">📊</div>
+                <div class="card-title">Family Reads</div>
+                <div class="card-description">View the latest messages and metrics from all device families. Monitor MQTT topics, API data, and real-time device status.</div>
+            </div>
+            <div style="color: #007bff; font-weight: bold; margin-top: 15px;">View &rarr;</div>
+        </a>
+        
+        <!-- Device Reads Card -->
+        <a href="/dashboard/device-last-reads/" class="dashboard-card">
+            <div>
+                <div class="card-icon">📱</div>
+                <div class="card-title">Device Reads</div>
+                <div class="card-description">Check the last read from individual devices. Filter by family and client to find specific device data quickly.</div>
+            </div>
+            <div style="color: #007bff; font-weight: bold; margin-top: 15px;">View &rarr;</div>
+        </a>
+        
+        <!-- Admin Panel Card -->
+        <a href="/admin/" class="dashboard-card">
+            <div>
+                <div class="card-icon">⚙️</div>
+                <div class="card-title">Administration</div>
+                <div class="card-description">Manage users, configure devices, monitor families, and control system settings. Admin access required.</div>
+            </div>
+            <div style="color: #007bff; font-weight: bold; margin-top: 15px;">Go to Admin &rarr;</div>
+        </a>
+        
+        <!-- API Documentation Card -->
+        <a href="/api/" class="dashboard-card">
+            <div>
+                <div class="card-icon">🔌</div>
+                <div class="card-title">API</div>
+                <div class="card-description">Access REST API endpoints for device data, reported measures, and integration with external systems.</div>
+            </div>
+            <div style="color: #007bff; font-weight: bold; margin-top: 15px;">View API &rarr;</div>
+        </a>
+        
+        <!-- Airflow Scheduler Card -->
+        <a href="http://{{ airflow_host }}/" target="_blank" class="dashboard-card">
+            <div>
+                <div class="card-icon">🔄</div>
+                <div class="card-title">Airflow</div>
+                <div class="card-description">Schedule and monitor data pipelines. View DAG runs, data exports, and automation workflows.</div>
+            </div>
+            <div style="color: #007bff; font-weight: bold; margin-top: 15px;">Open Airflow &rarr;</div>
+        </a>
+        
+        <!-- Prometheus Alerts Card -->
+        <a href="http://82.165.142.98:9090/alerts" target="_blank" class="dashboard-card">
+            <div>
+                <div class="card-icon">🚨</div>
+                <div class="card-title">Prometheus Alerts</div>
+                <div class="card-description">Monitor system alerts and metric conditions. View active alerts and system health status.</div>
+            </div>
+            <div style="color: #007bff; font-weight: bold; margin-top: 15px;">View Alerts &rarr;</div>
+        </a>
+        
+        <!-- Grafana Dashboards Card -->
+        <a href="http://localhost:3000/dashboards" target="_blank" class="dashboard-card">
+            <div>
+                <div class="card-icon">📈</div>
+                <div class="card-title">Grafana</div>
+                <div class="card-description">Advanced visualization and analytics. View custom dashboards for performance monitoring and trending.</div>
+            </div>
+            <div style="color: #007bff; font-weight: bold; margin-top: 15px;">Open Grafana &rarr;</div>
+        </a>
+        
+        <!-- External Devices Card -->
+        <a href="/external-devices/" class="dashboard-card">
+            <div>
+                <div class="card-icon">🌐</div>
+                <div class="card-title">External Devices</div>
+                <div class="card-description">View and manage devices from external databases (NANOENVI, CO2, ROUTERS, Shellies).</div>
+            </div>
+            <div style="color: #007bff; font-weight: bold; margin-top: 15px;">View Devices &rarr;</div>
+        </a>
+    </div>
+{% endblock %}

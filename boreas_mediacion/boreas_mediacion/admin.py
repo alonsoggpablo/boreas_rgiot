@@ -1,23 +1,130 @@
-
 from django.contrib import admin, messages
+from django.contrib.admin import SimpleListFilter
 from .models import MQTT_device_family, MQTT_broker, MQTT_feed, sensor_command, sensor_actuacion, router_get, \
     router_parameter, reported_measure, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, \
-    DatadisCredentials, DatadisSupply, SystemConfiguration
+    DatadisCredentials, DatadisSupply, SystemConfiguration, DeviceMonitoring
+from boreas_bot.models import DevicesNANOENVI, DevicesCO2, DevicesROUTERS
 
 @admin.register(MQTT_device_family)
 class MQTTDeviceFamilyAdmin(admin.ModelAdmin):
     list_display = ('id', 'name')
+
+# Custom filters for DeviceMonitoring
+class DeviceNameFilter(SimpleListFilter):
+    title = 'Device Name'
+    parameter_name = 'device_name'
+
+    def lookups(self, request, model_admin):
+        names = set()
+        for d in DevicesNANOENVI.objects.filter(name__isnull=False).values_list('name', flat=True):
+            if d:
+                names.add(d)
+        for d in DevicesCO2.objects.filter(name__isnull=False).values_list('name', flat=True):
+            if d:
+                names.add(d)
+        for d in DevicesROUTERS.objects.filter(name__isnull=False).values_list('name', flat=True):
+            if d:
+                names.add(d)
+        return [(name, name) for name in sorted(names)]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            # Get UUIDs matching this name from all device tables
+            uuids = set()
+            for d in DevicesNANOENVI.objects.filter(name=self.value()):
+                uuids.add(str(d.uuid))
+            for d in DevicesCO2.objects.filter(name=self.value()):
+                uuids.add(str(d.id))
+            for d in DevicesROUTERS.objects.filter(name=self.value()):
+                uuids.add(str(d.id))
+            return queryset.filter(uuid__in=uuids)
+        return queryset
+
+
+class DeviceClientFilter(SimpleListFilter):
+    title = 'Device Client'
+    parameter_name = 'device_client'
+
+    def lookups(self, request, model_admin):
+        clients = set()
+        for c in DevicesNANOENVI.objects.filter(client__isnull=False).values_list('client', flat=True):
+            if c:
+                clients.add(c)
+        for c in DevicesCO2.objects.filter(client__isnull=False).values_list('client', flat=True):
+            if c:
+                clients.add(c)
+        return [(client, client) for client in sorted(clients)]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            # Get UUIDs matching this client
+            uuids = set()
+            for d in DevicesNANOENVI.objects.filter(client=self.value()):
+                uuids.add(str(d.uuid))
+            for d in DevicesCO2.objects.filter(client=self.value()):
+                uuids.add(str(d.id))
+            return queryset.filter(uuid__in=uuids)
+        return queryset
+
 # Register reported_measure in admin
 @admin.register(reported_measure)
 class ReportedMeasureAdmin(admin.ModelAdmin):
-    list_display = ('device_id', 'device', 'measures', 'feed', 'family', 'report_time')
-    list_filter = ('device_family_id', 'report_time')
-    search_fields = ('device_id', 'device', 'measures', 'report_time')
+    list_display = ('device_id', 'device', 'measures', 'nanoenvi_name', 'nanoenvi_client', 'family', 'report_time')
+    list_filter = ('device_family_id', 'nanoenvi_client', 'report_time')
+    search_fields = ('device_id', 'device', 'measures', 'report_time', 'nanoenvi_uuid', 'nanoenvi_name', 'nanoenvi_client')
 
     def family(self, obj):
         return obj.device_family_id.name if obj.device_family_id else None
     family.admin_order_field = 'device_family_id'
     family.short_description = 'Family'
+
+# Register DeviceMonitoring in admin
+@admin.register(DeviceMonitoring)
+class DeviceMonitoringAdmin(admin.ModelAdmin):
+    list_display = ('uuid', 'source', 'device_name', 'device_client', 'monitored', 'updated_at')
+    list_filter = ('source', DeviceClientFilter, DeviceNameFilter, 'monitored', 'updated_at')
+    search_fields = ('uuid',)
+    readonly_fields = ('created_at', 'updated_at')
+    date_hierarchy = 'updated_at'
+    actions = ['mark_monitored', 'mark_not_monitored']
+
+    def device_name(self, obj):
+        """Fetch name from external device model"""
+        if obj.source == 'nanoenvi':
+            device = DevicesNANOENVI.objects.filter(uuid=obj.uuid).first()
+            return device.name if device else '-'
+        elif obj.source == 'co2':
+            device = DevicesCO2.objects.filter(id=obj.uuid).first()
+            return device.name if device else '-'
+        elif obj.source == 'routers':
+            device = DevicesROUTERS.objects.filter(id=obj.uuid).first()
+            return device.name if device else '-'
+        return '-'
+    device_name.short_description = 'Name'
+
+    def device_client(self, obj):
+        """Fetch client from external device model"""
+        if obj.source == 'nanoenvi':
+            device = DevicesNANOENVI.objects.filter(uuid=obj.uuid).first()
+            return device.client if device else '-'
+        elif obj.source == 'co2':
+            device = DevicesCO2.objects.filter(id=obj.uuid).first()
+            return device.client if device else '-'
+        elif obj.source == 'routers':
+            return '-'  # Routers don't have client field
+        return '-'
+    device_client.short_description = 'Client'
+
+    def mark_monitored(self, request, queryset):
+        updated = queryset.update(monitored=True)
+        self.message_user(request, f"{updated} device(s) marked as monitored.")
+    mark_monitored.short_description = "Mark selected as monitored"
+
+    def mark_not_monitored(self, request, queryset):
+        updated = queryset.update(monitored=False)
+        self.message_user(request, f"{updated} device(s) marked as not monitored.")
+    mark_not_monitored.short_description = "Mark selected as not monitored"
+
 # ====================
 #   MQTT READS
 # ====================

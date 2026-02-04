@@ -1,0 +1,305 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Device Last Reads - Boreas Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filters {
+        margin-bottom: 20px;
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    .filter-group {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    .filter-group label {
+        font-weight: bold;
+        color: #555;
+    }
+    select, input[type="submit"] {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    input[type="submit"] {
+        background-color: #007bff;
+        color: white;
+        cursor: pointer;
+        border: none;
+    }
+    input[type="submit"]:hover {
+        background-color: #0056b3;
+    }
+    .reset-btn {
+        background-color: #6c757d;
+    }
+    .reset-btn:hover {
+        background-color: #5a6268;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    table thead {
+        background-color: #007bff;
+        color: white;
+    }
+    table th {
+        padding: 12px;
+        text-align: left;
+        font-weight: bold;
+    }
+    table td {
+        padding: 12px;
+        border-bottom: 1px solid #ddd;
+    }
+    table tbody tr:hover {
+        background-color: #f9f9f9;
+    }
+    code {
+        background-color: #f4f4f4;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: monospace;
+    }
+    .null-value {
+        color: #999;
+        font-style: italic;
+    }
+    .timestamp {
+        color: #666;
+        font-size: 0.9em;
+    }
+    .no-data {
+        text-align: center;
+        color: #666;
+        padding: 20px;
+        font-style: italic;
+    }
+    .refresh-info {
+        text-align: center;
+        color: #666;
+        font-size: 0.85em;
+        margin-top: 15px;
+        padding: 10px;
+        background: #f9f9f9;
+        border-radius: 4px;
+    }
+    .refresh-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: #28a745;
+        border-radius: 50%;
+        margin-right: 5px;
+        animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    .row-stale {
+        background-color: #fff3cd !important;
+    }
+    .row-stale:hover {
+        background-color: #ffe69c !important;
+    }
+    .stale-indicator {
+        color: #856404;
+        font-weight: bold;
+        font-size: 0.8em;
+        display: block;
+        margin-top: 3px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+        <h1>Device Last Reads Dashboard</h1>
+        
+        <div class="filters">
+            <form method="get" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+                <div class="filter-group">
+                    <label for="family">Family:</label>
+                    <select name="family" id="family">
+                        <option value="">All</option>
+                        {% for family in families %}
+                            <option value="{{ family }}" {% if selected_family == family %}selected{% endif %}>{{ family }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="client">Client:</label>
+                    <select name="client" id="client">
+                        <option value="">All</option>
+                        {% for client in clients %}
+                            <option value="{{ client }}" {% if selected_client == client %}selected{% endif %}>{{ client }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <input type="submit" value="Filter">
+                    <a href="?"><input type="button" value="Reset" class="reset-btn"></a>
+                </div>
+            </form>
+        </div>
+        
+        {% if device_reads %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Device ID</th>
+                    <th>Family</th>
+                    <th>Name</th>
+                    <th>Client</th>
+                    <th>Last Report</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for read in device_reads %}
+                <tr data-timestamp="{{ read.report_time|date:'c' }}">
+                    <td><code>{{ read.device_id }}</code></td>
+                    <td>
+                        {% if read.device_family_id %}
+                            {{ read.device_family_id.name }}
+                        {% else %}
+                            <span class="null-value">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if read.nanoenvi_name %}
+                            {{ read.nanoenvi_name }}
+                        {% else %}
+                            <span class="null-value">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if read.nanoenvi_client %}
+                            {{ read.nanoenvi_client }}
+                        {% else %}
+                            <span class="null-value">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="timestamp">
+                        {{ read.report_time|date:"Y-m-d H:i:s" }}
+                        <span class="stale-indicator" style="display:none;"></span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p style="text-align: right; color: #666; margin-top: 20px;">Total: {{ device_reads|length }} devices</p>
+        {% else %}
+        <div class="no-data">No device reads found</div>
+        {% endif %}
+        
+        <div class="refresh-info">
+            <span class="refresh-indicator"></span>
+            <span>Auto-refreshing every 10 seconds | Last updated: <span id="last-updated">now</span></span>
+        </div>
+    </div>
+
+    <script>
+        const REFRESH_INTERVAL = 10000; // 10 seconds
+        const ONE_HOUR_MS = 60 * 60 * 1000; // 1 hour in milliseconds
+
+        function highlightStaleRows() {
+            const rows = document.querySelectorAll('table tbody tr[data-timestamp]');
+            const now = new Date();
+            
+            rows.forEach(row => {
+                const timestamp = new Date(row.dataset.timestamp);
+                const ageMs = now - timestamp;
+                const staleIndicator = row.querySelector('.stale-indicator');
+                
+                if (ageMs > ONE_HOUR_MS) {
+                    // More than 1 hour old - highlight in orange
+                    row.classList.add('row-stale');
+                    if (staleIndicator) {
+                        staleIndicator.textContent = '⚠ Stale (> 1h)';
+                        staleIndicator.style.display = 'block';
+                    }
+                } else {
+                    // Less than 1 hour old - remove highlight
+                    row.classList.remove('row-stale');
+                    if (staleIndicator) {
+                        staleIndicator.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        function refreshDashboard() {
+            const currentUrl = window.location.href;
+            
+            fetch(currentUrl, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                // Extract just the table content
+                const parser = new DOMParser();
+                const newDoc = parser.parseFromString(html, 'text/html');
+                
+                // Update the main content area
+                const newContent = newDoc.querySelector('.container');
+                const currentContent = document.querySelector('.container');
+                
+                if (newContent && currentContent) {
+                    currentContent.innerHTML = newContent.innerHTML;
+                    // Re-apply stale row highlighting after update
+                    highlightStaleRows();
+                }
+                
+                // Update the timestamp
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('es-ES');
+                const lastUpdated = document.getElementById('last-updated');
+                if (lastUpdated) {
+                    lastUpdated.textContent = timeString;
+                }
+            })
+            .catch(error => console.error('Error refreshing dashboard:', error));
+        }
+
+        // Start auto-refresh
+        document.addEventListener('DOMContentLoaded', function() {
+            // Highlight stale rows immediately on page load
+            highlightStaleRows();
+            
+            // Check for stale rows every 30 seconds (more frequently than full refresh)
+            setInterval(highlightStaleRows, 30000);
+            
+            // Refresh immediately on page load
+            setTimeout(refreshDashboard, REFRESH_INTERVAL);
+            
+            // Then refresh periodically
+            setInterval(refreshDashboard, REFRESH_INTERVAL);
+            
+            // Update timestamp on filter change
+            const filterSelects = document.querySelectorAll('select');
+            filterSelects.forEach(select => {
+                select.addEventListener('change', function() {
+                    // Preserve the selected filters
+                    const now = new Date();
+                    const timeString = now.toLocaleTimeString('es-ES');
+                    const lastUpdated = document.getElementById('last-updated');
+                    if (lastUpdated) {
+                        lastUpdated.textContent = timeString;
+                    }
+                });
+            });
+        });
+    </script>
+{% endblock %}

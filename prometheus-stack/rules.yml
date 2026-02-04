@@ -28,6 +28,15 @@ groups:
       summary: "Timeout for MQTT topic"
       description: "No messages received for topic {{ $labels.topic }} in the last {{ $value }} minutes."
 
+  - alert: MQTTMonitoredTopicTimeout
+    expr: mqtt_topic_monitored_timeout == 1
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Timeout for monitored MQTT topic"
+      description: "No messages received for monitored topic {{ $labels.topic }} in the last {{ $value }} minutes."
+
   - alert: SigfoxDeviceTimeout
     expr: sigfox_device_timeout == 1
     for: 15m

@@ -19,9 +19,35 @@ class reported_measure(models.Model):
     measures = models.JSONField(default=dict)
     feed = models.CharField(max_length=100, default='unknown')
     device_family_id = models.ForeignKey('MQTT_device_family', null=True, blank=True, on_delete=models.SET_NULL)
+    # Link to external DevicesNANOENVI table
+    nanoenvi_uuid = models.CharField(max_length=255, null=True, blank=True, help_text='UUID from devicesNANOENVI table')
+    nanoenvi_name = models.CharField(max_length=255, null=True, blank=True, help_text='Device name from devicesNANOENVI')
+    nanoenvi_client = models.CharField(max_length=255, null=True, blank=True, help_text='Client from devicesNANOENVI')
     
     class Meta:
         unique_together = ['feed', 'device_id']  # Only one record per feed+device_id combination
+
+# --- External Device Monitoring ---
+class DeviceMonitoring(models.Model):
+    DEVICE_SOURCE_CHOICES = [
+        ('nanoenvi', 'NanoENVI'),
+        ('co2', 'CO2'),
+        ('routers', 'Routers'),
+        ('shellies', 'Shellies'),
+    ]
+    
+    uuid = models.CharField(max_length=255)
+    source = models.CharField(max_length=50, choices=DEVICE_SOURCE_CHOICES)
+    monitored = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['uuid', 'source']
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"{self.source}:{self.uuid} - {'Monitored' if self.monitored else 'Ignored'}"
 
 # --- AEMET API Integration ---
 class AemetStation(models.Model):

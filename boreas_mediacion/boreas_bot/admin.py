@@ -39,3 +39,28 @@ class ExternalDBAdmin(admin.ModelAdmin):
             
             formset.save(using='external')
 
+
+# Register models
+@admin.register(DevicesNANOENVI)
+class DevicesNANOENVIAdmin(ExternalDBAdmin):
+    list_display = ('uuid', 'name', 'client', 'mac', 'site', 'update')
+    list_filter = ('client', 'site', 'update')
+    search_fields = ('uuid', 'name', 'client', 'mac')
+    readonly_fields = ('uuid', 'update')
+
+
+@admin.register(DevicesROUTERS)
+class DevicesROUTERSAdmin(ExternalDBAdmin):
+    list_display = ('id', 'name', 'type', 'mac')
+    list_filter = ('type',)
+    search_fields = ('id', 'name', 'mac')
+    readonly_fields = ('id',)
+
+
+@admin.register(DevicesCO2)
+class DevicesCO2Admin(ExternalDBAdmin):
+    list_display = ('id', 'name', 'client', 'update', 'ubicacion')
+    list_filter = ('client', 'update')
+    search_fields = ('id', 'name', 'client', 'mac')
+    readonly_fields = ('id', 'update')
+

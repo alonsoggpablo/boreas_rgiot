@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"time"
+
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
@@ -47,19 +48,22 @@ func main() {
 
 	// No env var check needed, values are hardcoded for testing
 
-
-		topicAPI := "http://web:8000/api/mqtt/active-topics/" // Django API service in Docker Compose
-		topics, err := fetchActiveTopics(topicAPI)
-		if err != nil {
-			log.Fatalf("Failed to fetch topics: %v", err)
-		}
-		fmt.Println("Topics to subscribe:")
-		for _, t := range topics {
-			fmt.Printf("  - %s (QoS %d)\n", t.Topic, t.QoS)
-		}
+	topicAPI := "http://web:8000/api/mqtt/active-topics/" // Django API service in Docker Compose
+	topics, err := fetchActiveTopics(topicAPI)
+	if err != nil {
+		log.Fatalf("Failed to fetch topics: %v", err)
+	}
+	fmt.Println("Topics to subscribe:")
+	for _, t := range topics {
+		fmt.Printf("  - %s (QoS %d)\n", t.Topic, t.QoS)
+	}
 	// Connect to DB for storing last reads
 	dbConnStr := "host=db user=boreas_user password=boreas_password dbname=boreas_db sslmode=disable"
-	dbw, err := NewDBWriter(dbConnStr)
+	deviceMapPath := os.Getenv("DEVICE_MAP_PATH")
+	if deviceMapPath == "" {
+		deviceMapPath = "/app/media/external_devices_map.json"
+	}
+	dbw, err := NewDBWriter(dbConnStr, deviceMapPath)
 	if err != nil {
 		log.Fatalf("Failed to connect to DB: %v", err)
 	}
@@ -76,8 +80,8 @@ func main() {
 		opts.SetPassword(mqttPass)
 	}
 	useTLS := strings.HasSuffix(mqttBroker, ":8883") ||
-		  strings.HasPrefix(mqttBroker, "ssl://") ||
-		  strings.HasPrefix(mqttBroker, "tls://")
+		strings.HasPrefix(mqttBroker, "ssl://") ||
+		strings.HasPrefix(mqttBroker, "tls://")
 	if useTLS {
 		tlsConfig := &tls.Config{
 			InsecureSkipVerify: true,
@@ -102,37 +106,39 @@ func main() {
 			deviceID := "unknown"
 			payload := string(msg.Payload())
 			// Try to parse idema from JSON payload
-				// Try AEMET idema, then device_info.uuid, then topic logic
-				type aemetPayload struct { Idema string `json:"idema"` }
-				var ap aemetPayload
-				if err := json.Unmarshal(msg.Payload(), &ap); err == nil && ap.Idema != "" {
-					deviceID = ap.Idema
-				} else {
-					// Try device_info.uuid
-					var payloadMap map[string]interface{}
-					if err := json.Unmarshal(msg.Payload(), &payloadMap); err == nil {
-						if devInfo, ok := payloadMap["device_info"].(map[string]interface{}); ok {
-							if uuid, ok := devInfo["uuid"].(string); ok && uuid != "" {
-								deviceID = uuid
-							}
-						}
-					}
-					// If still unknown, use topic logic
-					if deviceID == "unknown" {
-						parts := strings.Split(msg.Topic(), "/")
-						if len(parts) > 3 && parts[0] == "RESP" && parts[1] == "tactica" && parts[2] == "shelly2" {
-							deviceID = parts[3]
-						} else if len(parts) > 1 {
-							deviceID = parts[1]
-						} else if len(parts) > 0 {
-							deviceID = parts[0]
+			// Try AEMET idema, then device_info.uuid, then topic logic
+			type aemetPayload struct {
+				Idema string `json:"idema"`
+			}
+			var ap aemetPayload
+			if err := json.Unmarshal(msg.Payload(), &ap); err == nil && ap.Idema != "" {
+				deviceID = ap.Idema
+			} else {
+				// Try device_info.uuid
+				var payloadMap map[string]interface{}
+				if err := json.Unmarshal(msg.Payload(), &payloadMap); err == nil {
+					if devInfo, ok := payloadMap["device_info"].(map[string]interface{}); ok {
+						if uuid, ok := devInfo["uuid"].(string); ok && uuid != "" {
+							deviceID = uuid
 						}
 					}
 				}
-			   err := dbw.UpsertReportedMeasure(msg.Topic(), deviceID, payload)
-			   if err != nil {
-				   log.Printf("DB upsert error (reported_measure) for %s: %v", msg.Topic(), err)
-			   }
+				// If still unknown, use topic logic
+				if deviceID == "unknown" {
+					parts := strings.Split(msg.Topic(), "/")
+					if len(parts) > 3 && parts[0] == "RESP" && parts[1] == "tactica" && parts[2] == "shelly2" {
+						deviceID = parts[3]
+					} else if len(parts) > 1 {
+						deviceID = parts[1]
+					} else if len(parts) > 0 {
+						deviceID = parts[0]
+					}
+				}
+			}
+			err := dbw.UpsertReportedMeasure(msg.Topic(), deviceID, payload)
+			if err != nil {
+				log.Printf("DB upsert error (reported_measure) for %s: %v", msg.Topic(), err)
+			}
 			// Optionally, signal received for test/demo
 			// received <- true
 		})

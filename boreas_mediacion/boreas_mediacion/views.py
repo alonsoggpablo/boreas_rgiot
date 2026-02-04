@@ -10,8 +10,8 @@ from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes, action
 from django.utils import timezone
 from django.shortcuts import render
-from django.db.models import Max
-from django.views.generic import ListView
+from django.db.models import Max, F
+from django.views.generic import ListView, TemplateView
 from .models import MQTT_topic
 from rest_framework.decorators import api_view
 
@@ -39,6 +39,67 @@ from django.conf import settings
 from rest_framework.authentication import BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 
+
+# Dashboard Index View
+class DashboardIndexView(TemplateView):
+    template_name = 'dashboard/index.html'
+
+
+# Device Last Reads Dashboard
+class DeviceLastReadsView(TemplateView):
+    template_name = 'dashboard/device_last_reads.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Get filter parameters from request
+        family_filter = self.request.GET.get('family')
+        client_filter = self.request.GET.get('client')
+        
+        # Get latest read per device using subquery
+        latest_reads = reported_measure.objects.values('device_id').annotate(
+            last_report=Max('report_time')
+        )
+        
+        # Build queryset with filters
+        queryset = reported_measure.objects.filter(
+            device_id__in=[lr['device_id'] for lr in latest_reads]
+        ).select_related('device_family_id')
+        
+        # For each device, get only the latest record
+        result_dict = {}
+        for rm in queryset:
+            if rm.device_id not in result_dict or rm.report_time > result_dict[rm.device_id].report_time:
+                result_dict[rm.device_id] = rm
+        
+        device_list = list(result_dict.values())
+        
+        # Apply filters
+        if family_filter:
+            device_list = [d for d in device_list if d.device_family_id and d.device_family_id.name == family_filter]
+        
+        if client_filter:
+            device_list = [d for d in device_list if d.nanoenvi_client == client_filter]
+        
+        # Sort by report_time descending
+        device_list.sort(key=lambda x: x.report_time, reverse=True)
+        
+        # Get unique families and clients for filter dropdowns
+        all_families = reported_measure.objects.filter(
+            device_family_id__isnull=False
+        ).values_list('device_family_id__name', flat=True).distinct().order_by('device_family_id__name')
+        
+        all_clients = reported_measure.objects.filter(
+            nanoenvi_client__isnull=False
+        ).exclude(nanoenvi_client='').values_list('nanoenvi_client', flat=True).distinct().order_by('nanoenvi_client')
+        
+        context['device_reads'] = device_list
+        context['families'] = all_families
+        context['clients'] = all_clients
+        context['selected_family'] = family_filter
+        context['selected_client'] = client_filter
+        
+        return context
 
 
 class reported_measureViewList(generics.ListAPIView):

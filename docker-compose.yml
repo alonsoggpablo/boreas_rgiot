@@ -84,6 +84,9 @@ services:
       - PG_CONN=${PG_CONN:-host=db user=boreas_user password=boreas_password dbname=boreas_db sslmode=disable}
       - MQTT_USERNAME=${MQTT_USERNAME}
       - MQTT_PASSWORD=${MQTT_PASSWORD}
+      - DEVICE_MAP_PATH=/app/media/external_devices_map.json
+    volumes:
+      - media_volume:/app/media:ro
     depends_on:
       - db
       - web
