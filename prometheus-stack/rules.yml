@@ -63,3 +63,12 @@ groups:
     annotations:
       summary: "Timeout for Datadis supply"
       description: "No sync for Datadis supply {{ $labels.cups }} in the last hour."
+
+  - alert: AemetStationTimeout
+    expr: aemet_station_timeout == 1
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Timeout for AEMET station"
+      description: "No data received for AEMET station {{ $labels.station_id }} in the last 2 hours."

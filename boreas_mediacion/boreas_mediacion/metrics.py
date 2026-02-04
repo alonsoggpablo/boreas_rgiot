@@ -1,6 +1,6 @@
 from prometheus_client import Counter, Histogram, Gauge, generate_latest
 from prometheus_client import CollectorRegistry
-from .models import MQTT_device_family, MQTT_topic, TopicMessageTimeout, SigfoxDevice, SigfoxReading, WirelessLogic_SIM, DatadisSupply, DeviceMonitoring
+from .models import MQTT_device_family, MQTT_topic, TopicMessageTimeout, SigfoxDevice, SigfoxReading, WirelessLogic_SIM, DatadisSupply, DeviceMonitoring, AemetStation
 from django.utils import timezone
 from django.http import HttpResponse
 
@@ -15,6 +15,7 @@ MQTT_TOPIC_MONITORED_TIMEOUT = Gauge('mqtt_topic_monitored_timeout', 'Timeout fo
 SIGFOX_DEVICE_TIMEOUT = Gauge('sigfox_device_timeout', 'Timeout for Sigfox device (1=timeout, 0=ok)', ['device_id'], registry=registry)
 WIRELESSLOGIC_SIM_TIMEOUT = Gauge('wirelesslogic_sim_timeout', 'Timeout for WirelessLogic SIM (1=timeout, 0=ok)', ['iccid'], registry=registry)
 DATADIS_SUPPLY_TIMEOUT = Gauge('datadis_supply_timeout', 'Timeout for Datadis supply (1=timeout, 0=ok)', ['cups'], registry=registry)
+AEMET_STATION_TIMEOUT = Gauge('aemet_station_timeout', 'Timeout for AEMET station (1=timeout, 0=ok)', ['station_id'], registry=registry)
 
 class PrometheusMiddleware:
     def __init__(self, get_response):
@@ -93,5 +94,13 @@ def metrics_view(request):
             DATADIS_SUPPLY_TIMEOUT.labels(cups=supply.cups).set(1)
         else:
             DATADIS_SUPPLY_TIMEOUT.labels(cups=supply.cups).set(0)
+
+    # AEMET station timeouts: stations not updated in last 2 hours
+    for station in AemetStation.objects.filter(active=True):
+        last_update = station.updated_at
+        if not last_update or (timezone.now() - last_update).total_seconds() > 7200:
+            AEMET_STATION_TIMEOUT.labels(station_id=station.station_id).set(1)
+        else:
+            AEMET_STATION_TIMEOUT.labels(station_id=station.station_id).set(0)
 
     return HttpResponse(generate_latest(registry), content_type='text/plain')
