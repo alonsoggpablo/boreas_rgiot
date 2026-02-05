@@ -1,228 +1,189 @@
 {
-    "meta": {
-        "type": "db",
-        "canSave": true,
-        "canEdit": true,
-        "canAdmin": true,
-        "canStar": true,
-        "canDelete": true,
-        "slug": "iaq-measures",
-        "url": "/d/adkmlvf/iaq-measures",
-        "expires": "0001-01-01T00:00:00Z",
-        "created": "2026-02-05T12:20:31Z",
-        "updated": "2026-02-05T16:18:10Z",
-        "updatedBy": "admin",
-        "createdBy": "admin",
-        "version": 7,
-        "hasAcl": false,
-        "isFolder": false,
-        "apiVersion": "v0alpha1",
-        "folderId": 0,
-        "folderUid": "",
-        "folderTitle": "General",
-        "folderUrl": "",
-        "provisioned": false,
-        "provisionedExternalId": "",
-        "annotationsPermissions": {
-            "dashboard": {
-                "canAdd": true,
-                "canEdit": true,
-                "canDelete": true
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "boreas_postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
             },
-            "organization": {
-                "canAdd": true,
-                "canEdit": true,
-                "canDelete": true
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
             }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
         }
-    },
-    "dashboard": {
-        "annotations": {
-            "list": [
-                {
-                    "builtIn": 1,
-                    "datasource": {
-                        "type": "grafana",
-                        "uid": "-- Grafana --"
-                    },
-                    "enable": true,
-                    "hide": true,
-                    "iconColor": "rgba(0, 211, 255, 1)",
-                    "name": "Annotations & Alerts",
-                    "type": "dashboard"
-                }
-            ]
-        },
-        "editable": true,
-        "fiscalYearStartMonth": 0,
-        "graphTooltip": 0,
-        "id": 6,
-        "links": [],
-        "panels": [
-            {
-                "datasource": {
-                    "type": "grafana-postgresql-datasource",
-                    "uid": "boreas_postgres"
+      },
+      "pluginVersion": "12.3.2",
+      "targets": [
+        {
+          "dataset": "boreas_db",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "boreas_postgres"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  rm.report_time AS time,\r\n  (m->>'n') AS metric,\r\n  (m->>'v')::double precision AS value\r\nFROM boreas_mediacion_reported_measure rm\r\nCROSS JOIN LATERAL jsonb_array_elements(rm.measures->'measures') AS m\r\nWHERE rm.feed = 'IAQ_Measures'\r\n  AND rm.nanoenvi_name = '${device_name}'\r\n  AND (m->>'n') ~ '^(${IAQ_Measures:regex})$'\r\n  AND $__timeFilter(rm.report_time)\r\nORDER BY rm.report_time, (m->>'n');",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
                 },
-                "fieldConfig": {
-                    "defaults": {
-                        "color": {
-                            "mode": "palette-classic"
-                        },
-                        "custom": {
-                            "axisBorderShow": false,
-                            "axisCenteredZero": false,
-                            "axisColorMode": "text",
-                            "axisLabel": "",
-                            "axisPlacement": "auto",
-                            "barAlignment": 0,
-                            "barWidthFactor": 0.6,
-                            "drawStyle": "line",
-                            "fillOpacity": 0,
-                            "gradientMode": "none",
-                            "hideFrom": {
-                                "legend": false,
-                                "tooltip": false,
-                                "viz": false
-                            },
-                            "insertNulls": false,
-                            "lineInterpolation": "linear",
-                            "lineWidth": 1,
-                            "pointSize": 5,
-                            "scaleDistribution": {
-                                "type": "linear"
-                            },
-                            "showPoints": "auto",
-                            "showValues": false,
-                            "spanNulls": false,
-                            "stacking": {
-                                "group": "A",
-                                "mode": "none"
-                            },
-                            "thresholdsStyle": {
-                                "mode": "off"
-                            }
-                        },
-                        "mappings": [],
-                        "thresholds": {
-                            "mode": "absolute",
-                            "steps": [
-                                {
-                                    "color": "green",
-                                    "value": 0
-                                },
-                                {
-                                    "color": "red",
-                                    "value": 80
-                                }
-                            ]
-                        }
-                    },
-                    "overrides": []
-                },
-                "gridPos": {
-                    "h": 12,
-                    "w": 16,
-                    "x": 0,
-                    "y": 0
-                },
-                "id": 1,
-                "options": {
-                    "legend": {
-                        "calcs": [],
-                        "displayMode": "list",
-                        "placement": "bottom",
-                        "showLegend": true
-                    },
-                    "tooltip": {
-                        "hideZeros": false,
-                        "mode": "single",
-                        "sort": "none"
-                    }
-                },
-                "pluginVersion": "12.3.2",
-                "targets": [
-                    {
-                        "dataset": "boreas_db",
-                        "datasource": {
-                            "type": "grafana-postgresql-datasource",
-                            "uid": "boreas_postgres"
-                        },
-                        "editorMode": "code",
-                        "format": "time_series",
-                        "rawQuery": true,
-                        "rawSql": "SELECT\r\n  rm.report_time AS time,\r\n  (m->>'n') AS metric,\r\n  (m->>'v')::double precision AS value\r\nFROM boreas_mediacion_reported_measure rm\r\nCROSS JOIN LATERAL jsonb_array_elements(rm.measures->'measures') AS m\r\nWHERE rm.feed = 'IAQ_Measures'\r\n  AND rm.nanoenvi_name = '${device_name}'\r\n  AND (m->>'n') ~ '^(${IAQ_Measures:regex})$'\r\n  AND $__timeFilter(rm.report_time)\r\nORDER BY rm.report_time, (m->>'n');",
-                        "refId": "A",
-                        "sql": {
-                            "columns": [
-                                {
-                                    "parameters": [],
-                                    "type": "function"
-                                }
-                            ],
-                            "groupBy": [
-                                {
-                                    "property": {
-                                        "type": "string"
-                                    },
-                                    "type": "groupBy"
-                                }
-                            ],
-                            "limit": 50
-                        }
-                    }
-                ],
-                "title": "New panel",
-                "type": "timeseries"
-            }
-        ],
-        "preload": false,
-        "schemaVersion": 42,
-        "tags": [],
-        "templating": {
-            "list": [
-                {
-                    "current": {
-                        "text": "All",
-                        "value": "$__all"
-                    },
-                    "definition": "WITH latest AS (\n  SELECT measures\n  FROM boreas_mediacion_reported_measure\n  WHERE feed = 'IAQ_Measures' AND measures ? 'measures'\n  ORDER BY report_time DESC\n  LIMIT 1\n)\nSELECT DISTINCT\n  m->>'n' AS metric_name\nFROM latest\nCROSS JOIN LATERAL jsonb_array_elements(measures->'measures') AS m\nORDER BY metric_name;",
-                    "description": "IAQ_Measures",
-                    "includeAll": true,
-                    "label": "IAQ_Measures",
-                    "multi": true,
-                    "name": "IAQ_Measures",
-                    "options": [],
-                    "query": "WITH latest AS (\n  SELECT measures\n  FROM boreas_mediacion_reported_measure\n  WHERE feed = 'IAQ_Measures' AND measures ? 'measures'\n  ORDER BY report_time DESC\n  LIMIT 1\n)\nSELECT DISTINCT\n  m->>'n' AS metric_name\nFROM latest\nCROSS JOIN LATERAL jsonb_array_elements(measures->'measures') AS m\nORDER BY metric_name;",
-                    "refresh": 1,
-                    "regex": "",
-                    "type": "query"
-                },
-                {
-                    "current": {
-                        "text": "0060 EOSA",
-                        "value": "0060 EOSA"
-                    },
-                    "definition": "SELECT DISTINCT nanoenvi_name\nFROM boreas_mediacion_reported_measure\nWHERE nanoenvi_name IS NOT NULL AND nanoenvi_name != ''\nORDER BY nanoenvi_name",
-                    "label": "device_name",
-                    "name": "device_name",
-                    "options": [],
-                    "query": "SELECT DISTINCT nanoenvi_name\nFROM boreas_mediacion_reported_measure\nWHERE nanoenvi_name IS NOT NULL AND nanoenvi_name != ''\nORDER BY nanoenvi_name",
-                    "refresh": 1,
-                    "regex": "",
-                    "type": "query"
-                }
-            ]
-        },
-        "time": {
-            "from": "now-6h",
-            "to": "now"
-        },
-        "timepicker": {},
-        "timezone": "browser",
-        "title": "IAQ_Measures",
-        "uid": "adkmlvf",
-        "version": 7,
-        "weekStart": ""
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "New panel",
+      "type": "timeseries"
     }
+  ],
+  "preload": false,
+  "schemaVersion": 42,
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "definition": "WITH latest AS (\n  SELECT measures\n  FROM boreas_mediacion_reported_measure\n  WHERE feed = 'IAQ_Measures' AND measures ? 'measures'\n  ORDER BY report_time DESC\n  LIMIT 1\n)\nSELECT DISTINCT\n  m->>'n' AS metric_name\nFROM latest\nCROSS JOIN LATERAL jsonb_array_elements(measures->'measures') AS m\nORDER BY metric_name;",
+        "description": "IAQ_Measures",
+        "includeAll": true,
+        "label": "IAQ_Measures",
+        "multi": true,
+        "name": "IAQ_Measures",
+        "options": [],
+        "query": "WITH latest AS (\n  SELECT measures\n  FROM boreas_mediacion_reported_measure\n  WHERE feed = 'IAQ_Measures' AND measures ? 'measures'\n  ORDER BY report_time DESC\n  LIMIT 1\n)\nSELECT DISTINCT\n  m->>'n' AS metric_name\nFROM latest\nCROSS JOIN LATERAL jsonb_array_elements(measures->'measures') AS m\nORDER BY metric_name;",
+        "refresh": 1,
+        "regex": "",
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "0060 EOSA",
+          "value": "0060 EOSA"
+        },
+        "definition": "SELECT DISTINCT nanoenvi_name\nFROM boreas_mediacion_reported_measure\nWHERE nanoenvi_name IS NOT NULL AND nanoenvi_name != ''\nORDER BY nanoenvi_name",
+        "label": "device_name",
+        "name": "device_name",
+        "options": [],
+        "query": "SELECT DISTINCT nanoenvi_name\nFROM boreas_mediacion_reported_measure\nWHERE nanoenvi_name IS NOT NULL AND nanoenvi_name != ''\nORDER BY nanoenvi_name",
+        "refresh": 1,
+        "regex": "",
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "IAQ_Measures",
+  "uid": "iaq_measures",
+  "version": 7,
+  "weekStart": ""
 }
