@@ -53,6 +53,7 @@ services:
       - grafana-data:/var/lib/grafana
       - ./grafana_prometheus_datasource.yaml:/etc/grafana/provisioning/datasources/prometheus.yaml
       - ./grafana_postgres_datasource.yaml:/etc/grafana/provisioning/datasources/postgres.yaml
+      - /home/pablo/boreas_rgiot/prometheus-stack/grafana_dashboard_iaq_measures.json:/etc/grafana/provisioning/dashboards/iaq_measures.json
     networks:
       - boreas_rgiot_default
       - boreas_net
