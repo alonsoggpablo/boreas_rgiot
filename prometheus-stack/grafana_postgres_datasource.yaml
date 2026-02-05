@@ -11,7 +11,7 @@ datasources:
     access: proxy
     url: db:5432
     database: boreas_db
-    isDefault: true
+    isDefault: false
     user: boreas_user
     secureJsonData:
       password: boreas_password
