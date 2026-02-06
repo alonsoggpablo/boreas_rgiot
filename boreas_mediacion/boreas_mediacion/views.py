@@ -63,11 +63,13 @@ class DeviceLastReadsView(LoginRequiredMixin, TemplateView):
     login_url = '/admin/login/'
     
     def get_context_data(self, **kwargs):
+        from django.core.paginator import Paginator
         context = super().get_context_data(**kwargs)
         
         # Get filter parameters from request
         family_filter = self.request.GET.get('family')
         client_filter = self.request.GET.get('client')
+        page_number = self.request.GET.get('page', 1)
         
         # Get latest read per device using subquery
         latest_reads = reported_measure.objects.values('device_id').annotate(
@@ -94,8 +96,12 @@ class DeviceLastReadsView(LoginRequiredMixin, TemplateView):
         if client_filter:
             device_list = [d for d in device_list if d.nanoenvi_client == client_filter]
         
-        # Sort by report_time descending
+        # Sort by report_time descending (most recent first)
         device_list.sort(key=lambda x: x.report_time, reverse=True)
+        
+        # Paginate: 50 items per page
+        paginator = Paginator(device_list, 50)
+        page_obj = paginator.get_page(page_number)
         
         # Get unique families and clients for filter dropdowns
         all_families = reported_measure.objects.filter(
@@ -106,7 +112,9 @@ class DeviceLastReadsView(LoginRequiredMixin, TemplateView):
             nanoenvi_client__isnull=False
         ).exclude(nanoenvi_client='').values_list('nanoenvi_client', flat=True).distinct().order_by('nanoenvi_client')
         
-        context['device_reads'] = device_list
+        context['page_obj'] = page_obj
+        context['device_reads'] = page_obj.object_list
+        context['total_devices'] = len(device_list)
         context['families'] = all_families
         context['clients'] = all_clients
         context['selected_family'] = family_filter

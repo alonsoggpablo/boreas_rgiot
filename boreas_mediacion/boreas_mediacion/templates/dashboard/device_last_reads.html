@@ -196,7 +196,30 @@
                 {% endfor %}
             </tbody>
         </table>
-        <p style="text-align: right; color: #666; margin-top: 20px;">Total: {{ device_reads|length }} devices</p>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+            <p style="color: #666;">
+                Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ total_devices }} devices
+            </p>
+            
+            {% if page_obj.has_other_pages %}
+            <div class="pagination" style="display: flex; gap: 5px; align-items: center;">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1{% if selected_family %}&family={{ selected_family }}{% endif %}{% if selected_client %}&client={{ selected_client }}{% endif %}" style="padding: 5px 10px; border: 1px solid #ddd; border-radius: 3px; text-decoration: none; color: #007bff;">First</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if selected_family %}&family={{ selected_family }}{% endif %}{% if selected_client %}&client={{ selected_client }}{% endif %}" style="padding: 5px 10px; border: 1px solid #ddd; border-radius: 3px; text-decoration: none; color: #007bff;">Previous</a>
+                {% endif %}
+                
+                <span style="padding: 5px 10px; color: #666;">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </span>
+                
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if selected_family %}&family={{ selected_family }}{% endif %}{% if selected_client %}&client={{ selected_client }}{% endif %}" style="padding: 5px 10px; border: 1px solid #ddd; border-radius: 3px; text-decoration: none; color: #007bff;">Next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% if selected_family %}&family={{ selected_family }}{% endif %}{% if selected_client %}&client={{ selected_client }}{% endif %}" style="padding: 5px 10px; border: 1px solid #ddd; border-radius: 3px; text-decoration: none; color: #007bff;">Last</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
         {% else %}
         <div class="no-data">No device reads found</div>
         {% endif %}
