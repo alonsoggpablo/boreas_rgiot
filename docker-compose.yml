@@ -94,6 +94,23 @@ services:
     networks:
       - boreas_net
 
+  go_anomaly_detector:
+    build:
+      context: ./go_anomaly_detector
+    container_name: go_anomaly_detector
+    environment:
+      - PG_CONN=postgres://boreas_user:boreas_password@db:5432/boreas_db?sslmode=disable
+      - PARQUET_DIR=/app/data/reported_measures_archive
+      - CHECK_INTERVAL=5m
+      - BASELINE_DAYS=7
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - db
+    restart: unless-stopped
+    networks:
+      - boreas_net
+
 volumes:
   postgres_data:
   static_volume:
