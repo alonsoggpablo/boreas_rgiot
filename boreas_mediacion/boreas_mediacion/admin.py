@@ -125,6 +125,7 @@ class DeviceMonitoringAdmin(admin.ModelAdmin):
         self.message_user(request, f"{updated} device(s) marked as not monitored.")
     mark_not_monitored.short_description = "Mark selected as not monitored"
 
+
 # ====================
 #   MQTT READS
 # ====================

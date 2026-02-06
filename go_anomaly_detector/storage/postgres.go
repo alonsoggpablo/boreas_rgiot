@@ -21,7 +21,7 @@ type ReportedMeasure struct {
 	NanoenviName   sql.NullString
 	NanoenviClient sql.NullString
 	Feed           string
-	Measures       map[string]interface{}
+	Measures       interface{} // Can be map[string]interface{} or primitive value
 }
 
 type Anomaly struct {
@@ -80,9 +80,12 @@ func (s *PostgresStore) GetRecentMeasures(ctx context.Context, hours int) ([]Rep
 			return nil, fmt.Errorf("scan failed: %w", err)
 		}
 
-		if err := json.Unmarshal(measuresJSON, &m.Measures); err != nil {
+		// Try to unmarshal as interface{} to handle both objects and primitives
+		var measuresData interface{}
+		if err := json.Unmarshal(measuresJSON, &measuresData); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal measures: %w", err)
 		}
+		m.Measures = measuresData
 
 		measures = append(measures, m)
 	}
@@ -131,8 +134,8 @@ func (s *PostgresStore) StoreAnomaly(ctx context.Context, anomaly Anomaly) error
 	insertSQL := `
 		INSERT INTO boreas_mediacion_detected_anomaly 
 		(device_name, device_id, client, metric_name, metric_value, anomaly_type, 
-		 severity, baseline_mean, baseline_std, detected_at, details)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		 severity, baseline_mean, baseline_std, detected_at, details, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
 	`
 
 	_, err = s.db.ExecContext(ctx, insertSQL,

@@ -126,15 +126,22 @@ func (d *Detector) groupByDeviceMetric(measures []storage.ReportedMeasure) map[s
 			grouped[deviceKey] = make(map[string][]storage.ReportedMeasure)
 		}
 
-		// Extract metric names from measures JSON
-		if measuresData, ok := measure.Measures["measures"].([]interface{}); ok {
-			for _, m := range measuresData {
-				if metricMap, ok := m.(map[string]interface{}); ok {
-					if metricName, ok := metricMap["n"].(string); ok {
-						grouped[deviceKey][metricName] = append(grouped[deviceKey][metricName], measure)
+		// Handle both object and primitive measure types
+		if measuresMap, ok := measure.Measures.(map[string]interface{}); ok {
+			// Object type: extract metric names from measures array
+			if measuresData, ok := measuresMap["measures"].([]interface{}); ok {
+				for _, m := range measuresData {
+					if metricMap, ok := m.(map[string]interface{}); ok {
+						if metricName, ok := metricMap["n"].(string); ok {
+							grouped[deviceKey][metricName] = append(grouped[deviceKey][metricName], measure)
+						}
 					}
 				}
 			}
+		} else {
+			// Primitive type: use feed as metric name
+			metricName := measure.Feed
+			grouped[deviceKey][metricName] = append(grouped[deviceKey][metricName], measure)
 		}
 	}
 
@@ -153,15 +160,25 @@ func (d *Detector) calculateBaselines(measures []storage.ReportedMeasure) map[st
 			deviceKey = measure.NanoenviName.String
 		}
 
-		if measuresData, ok := measure.Measures["measures"].([]interface{}); ok {
-			for _, m := range measuresData {
-				if metricMap, ok := m.(map[string]interface{}); ok {
-					metricName, _ := metricMap["n"].(string)
-					if value := d.parseFloat(metricMap["v"]); value != nil {
-						key := deviceKey + ":" + metricName
-						valuesByKey[key] = append(valuesByKey[key], *value)
+		// Handle both object and primitive measure types
+		if measuresMap, ok := measure.Measures.(map[string]interface{}); ok {
+			// Object type: extract metrics from measures array
+			if measuresData, ok := measuresMap["measures"].([]interface{}); ok {
+				for _, m := range measuresData {
+					if metricMap, ok := m.(map[string]interface{}); ok {
+						metricName, _ := metricMap["n"].(string)
+						if value := d.parseFloat(metricMap["v"]); value != nil {
+							key := deviceKey + ":" + metricName
+							valuesByKey[key] = append(valuesByKey[key], *value)
+						}
 					}
 				}
+			}
+		} else {
+			// Primitive type: use the value directly
+			if value := d.parseFloat(measure.Measures); value != nil {
+				key := deviceKey + ":" + measure.Feed
+				valuesByKey[key] = append(valuesByKey[key], *value)
 			}
 		}
 	}
@@ -248,15 +265,21 @@ func (d *Detector) detectStatisticalAnomaly(measure storage.ReportedMeasure, met
 }
 
 // extractMetricValue extracts a specific metric value from measures JSON
-func (d *Detector) extractMetricValue(measures map[string]interface{}, metricName string) *float64 {
-	if measuresData, ok := measures["measures"].([]interface{}); ok {
-		for _, m := range measuresData {
-			if metricMap, ok := m.(map[string]interface{}); ok {
-				if name, _ := metricMap["n"].(string); name == metricName {
-					return d.parseFloat(metricMap["v"])
+func (d *Detector) extractMetricValue(measures interface{}, metricName string) *float64 {
+	// Handle object type
+	if measuresMap, ok := measures.(map[string]interface{}); ok {
+		if measuresData, ok := measuresMap["measures"].([]interface{}); ok {
+			for _, m := range measuresData {
+				if metricMap, ok := m.(map[string]interface{}); ok {
+					if name, _ := metricMap["n"].(string); name == metricName {
+						return d.parseFloat(metricMap["v"])
+					}
 				}
 			}
 		}
+	} else {
+		// Handle primitive type - return the value directly
+		return d.parseFloat(measures)
 	}
 	return nil
 }
@@ -271,6 +294,29 @@ func (d *Detector) parseFloat(v interface{}) *float64 {
 		return &f
 	case int:
 		f := float64(val)
+		return &f
+	case int64:
+		f := float64(val)
+		return &f
+	case int32:
+		f := float64(val)
+		return &f
+	case uint:
+		f := float64(val)
+		return &f
+	case uint64:
+		f := float64(val)
+		return &f
+	case uint32:
+		f := float64(val)
+		return &f
+	case bool:
+		// Convert bool to 0 or 1
+		if val {
+			f := 1.0
+			return &f
+		}
+		f := 0.0
 		return &f
 	case string:
 		var f float64

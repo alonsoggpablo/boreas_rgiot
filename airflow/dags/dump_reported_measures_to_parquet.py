@@ -11,12 +11,12 @@ import pendulum
 
 def dump_reported_measures(**context):
     """Execute the Parquet dump script."""
-    sys.path.insert(0, '/app')
+    sys.path.insert(0, '/app/boreas_mediacion')
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'boreas_mediacion.settings')
     
     # Import and run the dump script
-    from boreas_mediacion.dump_reported_measures_to_parquet import dump_to_parquet
-    dump_to_parquet()
+    import dump_reported_measures_to_parquet
+    dump_reported_measures_to_parquet.dump_to_parquet()
     print("✓ Parquet dump completed successfully")
 
 # DAG Configuration

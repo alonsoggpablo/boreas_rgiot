@@ -7,11 +7,11 @@ deleteDatasources:
 datasources:
   - name: Postgres (boreas_db)
     uid: boreas_postgres
-    type: postgres
+    type: grafana-postgresql-datasource
     access: proxy
     url: db:5432
     database: boreas_db
-    isDefault: false
+    isDefault: true
     user: boreas_user
     secureJsonData:
       password: boreas_password
