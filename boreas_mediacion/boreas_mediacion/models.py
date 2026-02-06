@@ -336,6 +336,40 @@ class DatadisSupply(models.Model):
 
 
 
+class DetectedAnomaly(models.Model):
+    """Anomalías detectadas por el agente Go en reported_measure"""
+    
+    device_name = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    device_id = models.CharField(max_length=100, db_index=True)
+    client = models.CharField(max_length=255, blank=True, null=True)
+    metric_name = models.CharField(max_length=100, db_index=True)
+    metric_value = models.FloatField()
+    
+    anomaly_type = models.CharField(max_length=50, help_text="Tipo: statistical_outlier, sudden_change, etc.")
+    severity = models.FloatField(help_text="Severidad (ej: z-score)")
+    
+    baseline_mean = models.FloatField(help_text="Media histórica del métrico")
+    baseline_std = models.FloatField(help_text="Desviación estándar histórica")
+    
+    detected_at = models.DateTimeField(db_index=True, help_text="Momento de detección")
+    details = models.JSONField(default=dict, help_text="Detalles adicionales (z_score, baseline_min, etc.)")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'boreas_mediacion_detected_anomaly'
+        ordering = ['-detected_at']
+        verbose_name = "Detected Anomaly"
+        verbose_name_plural = "Detected Anomalies"
+        indexes = [
+            models.Index(fields=['device_id', 'metric_name', '-detected_at']),
+            models.Index(fields=['anomaly_type', '-detected_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.device_name or self.device_id} - {self.metric_name} ({self.anomaly_type})"
+
+
 class TopicMessageTimeout(models.Model):
     """Configuración de alertas por timeout de mensajes en tópicos"""
     

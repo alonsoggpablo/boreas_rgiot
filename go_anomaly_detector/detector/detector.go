@@ -118,8 +118,8 @@ func (d *Detector) groupByDeviceMetric(measures []storage.ReportedMeasure) map[s
 
 	for _, measure := range measures {
 		deviceKey := measure.DeviceID
-		if measure.NanoenviName != "" {
-			deviceKey = measure.NanoenviName
+		if measure.NanoenviName.Valid && measure.NanoenviName.String != "" {
+			deviceKey = measure.NanoenviName.String
 		}
 
 		if grouped[deviceKey] == nil {
@@ -149,8 +149,8 @@ func (d *Detector) calculateBaselines(measures []storage.ReportedMeasure) map[st
 	// Collect all values
 	for _, measure := range measures {
 		deviceKey := measure.DeviceID
-		if measure.NanoenviName != "" {
-			deviceKey = measure.NanoenviName
+		if measure.NanoenviName.Valid && measure.NanoenviName.String != "" {
+			deviceKey = measure.NanoenviName.String
 		}
 
 		if measuresData, ok := measure.Measures["measures"].([]interface{}); ok {
@@ -216,10 +216,18 @@ func (d *Detector) detectStatisticalAnomaly(measure storage.ReportedMeasure, met
 
 	// Threshold: 3 standard deviations (99.7% confidence)
 	if zScore > 3.0 {
+		deviceName := ""
+		if measure.NanoenviName.Valid {
+			deviceName = measure.NanoenviName.String
+		}
+		client := ""
+		if measure.NanoenviClient.Valid {
+			client = measure.NanoenviClient.String
+		}
 		return &storage.Anomaly{
-			DeviceName:   measure.NanoenviName,
+			DeviceName:   deviceName,
 			DeviceID:     measure.DeviceID,
-			Client:       measure.NanoenviClient,
+			Client:       client,
 			MetricName:   metricName,
 			MetricValue:  value,
 			AnomalyType:  "statistical_outlier",

@@ -1,4 +1,4 @@
-from .models import reported_measure, MQTT_tx, sensor_command, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading
+from .models import reported_measure, MQTT_tx, sensor_command, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, DetectedAnomaly
 from rest_framework import serializers
 
 
@@ -7,6 +7,12 @@ class reported_measureSerializer(serializers.ModelSerializer):
     class Meta:
         model = reported_measure
         fields = ('id', 'report_time', 'device', 'device_id', 'measures', 'feed')
+
+
+class DetectedAnomalySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DetectedAnomaly
+        fields = '__all__'
 
 
 class MQTT_tx_serializer(serializers.ModelSerializer):

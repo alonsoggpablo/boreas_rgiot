@@ -28,11 +28,12 @@ def active_mqtt_topics(request):
         'qos': t.qos
     } for t in topics]
     return Response(data)
-from .models import reported_measure, MQTT_broker, MQTT_tx, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, MQTT_device_family
+from .models import reported_measure, MQTT_broker, MQTT_tx, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, MQTT_device_family, DetectedAnomaly
 # from .mqtt import client as mqtt_client
 from .serializers import (reported_measureSerializer, MQTT_tx_serializer,
                           WirelessLogic_SIMSerializer, WirelessLogic_SIMListSerializer, 
-                          WirelessLogic_UsageSerializer, SigfoxDeviceSerializer, SigfoxReadingSerializer)
+                          WirelessLogic_UsageSerializer, SigfoxDeviceSerializer, SigfoxReadingSerializer,
+                          DetectedAnomalySerializer)
 from django_filters.rest_framework import DjangoFilterBackend
 from django_filters.rest_framework import filters
 from .wirelesslogic_service import WirelessLogicService
@@ -493,3 +494,18 @@ def family_last_messages(request):
     }
     
     return render(request, 'family_messages.html', context)
+
+
+# Detected Anomalies API
+class DetectedAnomalyViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint for viewing detected anomalies.
+    Read-only as anomalies are created by the Go agent.
+    """
+    queryset = DetectedAnomaly.objects.all()
+    serializer_class = DetectedAnomalySerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['device_id', 'device_name', 'client', 'metric_name', 'anomaly_type', 'detected_at']
+    ordering_fields = ['detected_at', 'severity']
+    ordering = ['-detected_at']
+

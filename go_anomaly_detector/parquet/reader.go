@@ -64,12 +64,7 @@ func (pr *ParquetReader) readFile(filepath string) ([]ReportedMeasureRecord, err
 	}
 	defer file.Close()
 
-	stat, err := file.Stat()
-	if err != nil {
-		return nil, err
-	}
-
-	reader := parquet.NewReader(file, stat.Size())
+	reader := parquet.NewReader(file)
 	defer reader.Close()
 
 	var records []ReportedMeasureRecord

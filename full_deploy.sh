@@ -151,9 +151,12 @@ else:
 
 
 
-# After migrations, start go_mqtt and Airflow services
+# After migrations, start go_mqtt, go_anomaly_detector, and Airflow services
 echo "🟢 Starting go_mqtt service..."
 docker compose up -d go_mqtt --remove-orphans
+
+echo "🔍 Starting go_anomaly_detector service..."
+docker compose up -d go_anomaly_detector --remove-orphans
 
 echo "🟢 Starting Airflow services..."
 docker compose -f docker-compose.yml -f docker-compose.airflow.yml up -d airflow-webserver airflow-scheduler --remove-orphans

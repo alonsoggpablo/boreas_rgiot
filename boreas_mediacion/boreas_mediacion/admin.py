@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django.contrib.admin import SimpleListFilter
 from .models import MQTT_device_family, MQTT_broker, MQTT_feed, sensor_command, sensor_actuacion, router_get, \
     router_parameter, reported_measure, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, \
-    DatadisCredentials, DatadisSupply, SystemConfiguration, DeviceMonitoring
+    DatadisCredentials, DatadisSupply, SystemConfiguration, DeviceMonitoring, DetectedAnomaly
 from boreas_bot.models import DevicesNANOENVI, DevicesCO2, DevicesROUTERS
 
 @admin.register(MQTT_device_family)
@@ -514,5 +514,27 @@ class WirelessLogicUsageAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at', 'updated_at')
 
 
-
-
+@admin.register(DetectedAnomaly)
+class DetectedAnomalyAdmin(admin.ModelAdmin):
+    list_display = ('detected_at', 'device_name', 'device_id', 'client', 'metric_name', 'metric_value', 'anomaly_type', 'severity', 'baseline_mean')
+    list_filter = ('anomaly_type', 'client', 'detected_at', 'metric_name')
+    search_fields = ('device_name', 'device_id', 'client', 'metric_name')
+    readonly_fields = ('detected_at', 'created_at', 'details')
+    date_hierarchy = 'detected_at'
+    ordering = ('-detected_at',)
+    
+    fieldsets = (
+        ('Device Information', {
+            'fields': ('device_name', 'device_id', 'client')
+        }),
+        ('Metric Details', {
+            'fields': ('metric_name', 'metric_value', 'anomaly_type', 'severity')
+        }),
+        ('Baseline Statistics', {
+            'fields': ('baseline_mean', 'baseline_std')
+        }),
+        ('Detection Metadata', {
+            'fields': ('detected_at', 'created_at', 'details'),
+            'classes': ('collapse',)
+        }),
+    )

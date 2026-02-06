@@ -18,8 +18,8 @@ type ReportedMeasure struct {
 	ID             int
 	ReportTime     time.Time
 	DeviceID       string
-	NanoenviName   string
-	NanoenviClient string
+	NanoenviName   sql.NullString
+	NanoenviClient sql.NullString
 	Feed           string
 	Measures       map[string]interface{}
 }

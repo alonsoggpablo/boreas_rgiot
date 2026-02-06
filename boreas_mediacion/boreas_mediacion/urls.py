@@ -28,6 +28,7 @@ router.register(r'wirelesslogic/sims', views.WirelessLogic_SIMViewSet, basename=
 router.register(r'wirelesslogic/usage', views.WirelessLogic_UsageViewSet, basename='wirelesslogic-usage')
 router.register(r'sigfox/devices', views.SigfoxDeviceViewSet, basename='sigfox-device')
 router.register(r'sigfox/readings', views.SigfoxReadingViewSet, basename='sigfox-reading')
+router.register(r'anomalies', views.DetectedAnomalyViewSet, basename='anomaly')
 
 
 urlpatterns = [
