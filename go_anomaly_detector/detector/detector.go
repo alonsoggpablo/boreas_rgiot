@@ -2,11 +2,13 @@ package detector
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math"
 	"time"
 
+	"go_anomaly_detector/parquet"
 	"go_anomaly_detector/storage"
 )
 
@@ -58,9 +60,15 @@ func (d *Detector) DetectAnomalies(ctx context.Context) (*DetectionResult, error
 	deviceMetrics := d.groupByDeviceMetric(measures)
 	result.DevicesChecked = len(deviceMetrics)
 
-	// Calculate baselines (simplified - uses recent data for now)
-	// TODO: Load from Parquet files for true historical baseline
-	baselines := d.calculateBaselines(measures)
+	// Load historical baselines from Parquet files
+	log.Printf("Loading baselines from Parquet files (%d days)...", d.baselineDays)
+	baselines, err := d.loadHistoricalBaselines()
+	if err != nil {
+		log.Printf("Warning: Failed to load Parquet baselines: %v. Using recent data only.", err)
+		baselines = d.calculateBaselines(measures)
+	} else {
+		log.Printf("✓ Loaded baselines for %d device/metric combinations", len(baselines))
+	}
 
 	// Detect anomalies
 	anomaliesDetected := 0
@@ -263,4 +271,94 @@ func (d *Detector) parseFloat(v interface{}) *float64 {
 		}
 	}
 	return nil
+}
+
+// loadHistoricalBaselines loads baselines from Parquet archive files
+func (d *Detector) loadHistoricalBaselines() (map[string]MetricStats, error) {
+	reader := parquet.NewParquetReader(d.parquetDir)
+
+	// Calculate date range: last N days
+	endDate := time.Now().AddDate(0, 0, -1) // Yesterday (data is archived)
+	startDate := endDate.AddDate(0, 0, -d.baselineDays)
+
+	log.Printf("Reading Parquet files from %s to %s", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+
+	records, err := reader.ReadDateRange(startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read Parquet files: %w", err)
+	}
+
+	if len(records) == 0 {
+		return nil, fmt.Errorf("no historical data found in Parquet files")
+	}
+
+	log.Printf("Loaded %d records from Parquet files", len(records))
+
+	// Convert Parquet records to measures and calculate baselines
+	valuesByKey := make(map[string][]float64)
+
+	for _, record := range records {
+		deviceKey := record.DeviceID
+		if record.NanoenviName != "" {
+			deviceKey = record.NanoenviName
+		}
+
+		// Parse measures JSON
+		var measures map[string]interface{}
+		if err := json.Unmarshal([]byte(record.Measures), &measures); err != nil {
+			continue
+		}
+
+		// Extract metrics
+		if measuresData, ok := measures["measures"].([]interface{}); ok {
+			for _, m := range measuresData {
+				if metricMap, ok := m.(map[string]interface{}); ok {
+					metricName, _ := metricMap["n"].(string)
+					if value := d.parseFloat(metricMap["v"]); value != nil {
+						key := deviceKey + ":" + metricName
+						valuesByKey[key] = append(valuesByKey[key], *value)
+					}
+				}
+			}
+		}
+	}
+
+	// Calculate statistics
+	baselines := make(map[string]MetricStats)
+	for key, values := range valuesByKey {
+		if len(values) < 3 {
+			continue
+		}
+
+		stats := MetricStats{
+			Count: len(values),
+			Min:   values[0],
+			Max:   values[0],
+		}
+
+		// Calculate mean
+		sum := 0.0
+		for _, v := range values {
+			sum += v
+			if v < stats.Min {
+				stats.Min = v
+			}
+			if v > stats.Max {
+				stats.Max = v
+			}
+		}
+		stats.Mean = sum / float64(len(values))
+
+		// Calculate standard deviation
+		variance := 0.0
+		for _, v := range values {
+			diff := v - stats.Mean
+			variance += diff * diff
+		}
+		stats.StdDev = math.Sqrt(variance / float64(len(values)))
+
+		baselines[key] = stats
+	}
+
+	return baselines, nil
 }
