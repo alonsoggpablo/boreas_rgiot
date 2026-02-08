@@ -29,6 +29,8 @@ router.register(r'wirelesslogic/usage', views.WirelessLogic_UsageViewSet, basena
 router.register(r'sigfox/devices', views.SigfoxDeviceViewSet, basename='sigfox-device')
 router.register(r'sigfox/readings', views.SigfoxReadingViewSet, basename='sigfox-reading')
 router.register(r'anomalies', views.DetectedAnomalyViewSet, basename='anomaly')
+router.register(r'device-types', views.DeviceTypeMappingViewSet, basename='device-type')
+router.register(r'external-devices', views.ExternalDeviceMappingViewSet, basename='external-device')
 
 
 urlpatterns = [

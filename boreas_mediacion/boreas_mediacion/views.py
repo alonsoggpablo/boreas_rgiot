@@ -2,9 +2,10 @@ import json
 from datetime import datetime, date
 import paho.mqtt.client as mqtt
 import django_filters
+from django_filters.rest_framework import DjangoFilterBackend
 from django.http import JsonResponse
 from paho.mqtt.client import ssl
-from rest_framework import viewsets, permissions, generics, status
+from rest_framework import viewsets, permissions, generics, status, filters
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes, action
@@ -13,7 +14,7 @@ from django.shortcuts import render
 from django.db.models import Max, F, Subquery
 from django.views.generic import ListView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from .models import MQTT_topic
+from .models import MQTT_topic, DeviceTypeMapping, ExternalDeviceMapping
 from rest_framework.decorators import api_view
 
 from rest_framework.permissions import AllowAny
@@ -33,9 +34,8 @@ from .models import reported_measure, MQTT_broker, MQTT_tx, WirelessLogic_SIM, W
 from .serializers import (reported_measureSerializer, MQTT_tx_serializer,
                           WirelessLogic_SIMSerializer, WirelessLogic_SIMListSerializer, 
                           WirelessLogic_UsageSerializer, SigfoxDeviceSerializer, SigfoxReadingSerializer,
-                          DetectedAnomalySerializer)
+                          DetectedAnomalySerializer, DeviceTypeMappingSerializer, ExternalDeviceMappingSerializer)
 from django_filters.rest_framework import DjangoFilterBackend
-from django_filters.rest_framework import filters
 from .wirelesslogic_service import WirelessLogicService
 from django.conf import settings
 from rest_framework.authentication import BasicAuthentication
@@ -542,3 +542,45 @@ class DetectedAnomalyViewSet(viewsets.ReadOnlyModelViewSet):
     ordering_fields = ['detected_at', 'severity']
     ordering = ['-detected_at']
 
+
+# External Device Integration ViewSets
+class DeviceTypeMappingViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing device type mappings
+    
+    Endpoints:
+    - GET /api/device-types/ - List all mappings
+    - POST /api/device-types/ - Create new mapping
+    - GET /api/device-types/{id}/ - Retrieve specific mapping
+    - PUT /api/device-types/{id}/ - Update mapping
+    - DELETE /api/device-types/{id}/ - Delete mapping
+    """
+    queryset = DeviceTypeMapping.objects.select_related('mqtt_device_family')
+    serializer_class = DeviceTypeMappingSerializer
+    permission_classes = [permissions.AllowAny]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['mqtt_device_family']
+    search_fields = ['external_device_type_name']
+    ordering_fields = ['external_device_type_name', 'created_at']
+    ordering = ['external_device_type_name']
+
+
+class ExternalDeviceMappingViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing external device mappings
+    
+    Endpoints:
+    - GET /api/external-devices/ - List all devices
+    - POST /api/external-devices/ - Create new device
+    - GET /api/external-devices/{id}/ - Retrieve specific device
+    - PUT /api/external-devices/{id}/ - Update device
+    - DELETE /api/external-devices/{id}/ - Delete device
+    """
+    queryset = ExternalDeviceMapping.objects.all()
+    serializer_class = ExternalDeviceMappingSerializer
+    permission_classes = [permissions.AllowAny]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['client_name', 'status', 'is_active']
+    search_fields = ['external_device_id', 'external_alias', 'client_name']
+    ordering_fields = ['external_device_id', 'client_name', 'updated_at']
+    ordering = ['-updated_at']

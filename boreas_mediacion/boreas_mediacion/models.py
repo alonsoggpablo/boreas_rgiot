@@ -409,6 +409,128 @@ class TopicMessageTimeout(models.Model):
         return self.last_message_time < timeout_threshold
 
 
+# --- External Device Integration ---
+class DeviceTypeMapping(models.Model):
+    """Maps external device types to internal MQTT device families"""
+    external_device_type_name = models.CharField(
+        max_length=255,
+        unique=True,
+        help_text="External device type name (e.g., 'Router', 'Water Meter')"
+    )
+    mqtt_device_family = models.ForeignKey(
+        'MQTT_device_family',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='device_type_mappings',
+        help_text="Link to internal MQTT device family"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'boreas_mediacion_device_type_mapping'
+        managed = False
+        verbose_name = "Device Type Mapping"
+        verbose_name_plural = "Device Type Mappings"
+        ordering = ['external_device_type_name']
+
+    def __str__(self):
+        family = self.mqtt_device_family.name if self.mqtt_device_family else "Unmapped"
+        return f"{self.external_device_type_name} → {family}"
+
+
+class ExternalDeviceMapping(models.Model):
+    """Stores external device information with metadata"""
+    external_device_id = models.CharField(
+        max_length=255,
+        unique=True,
+        db_index=True,
+        help_text="Unique external device identifier"
+    )
+    external_alias = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Friendly name for the device"
+    )
+    internal_device_uuid = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="UUID linking to internal system"
+    )
+    client_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="Client/Organization name"
+    )
+    location_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Physical location"
+    )
+    group_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Logical grouping"
+    )
+    purchase_date = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Device acquisition date"
+    )
+    sale_date = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Device sales/disposal date"
+    )
+    status = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="Status: Venta, Stock, etc."
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Device is active"
+    )
+    metadata = models.JSONField(
+        default=dict,
+        help_text="Flexible metadata: device_type, group_name, crawl_date, crawled_from, etc."
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'boreas_mediacion_external_device_mapping'
+        managed = False
+        verbose_name = "External Device Mapping"
+        verbose_name_plural = "External Device Mappings"
+        ordering = ['-updated_at']
+        indexes = [
+            models.Index(fields=['external_device_id']),
+            models.Index(fields=['client_name']),
+            models.Index(fields=['status']),
+        ]
+
+    def __str__(self):
+        return f"{self.external_device_id} ({self.external_alias or 'No alias'})"
+
+    @property
+    def device_type(self):
+        """Get device type from metadata"""
+        return self.metadata.get('device_type', 'Unknown')
+
+    @property
+    def crawl_date(self):
+        """Get crawl date from metadata"""
+        return self.metadata.get('crawl_date')
+
+
 class SystemConfiguration(models.Model):
     """Configuración general del sistema"""
     
