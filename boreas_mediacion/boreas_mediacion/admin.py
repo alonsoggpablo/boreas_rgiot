@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django.contrib.admin import SimpleListFilter
 from .models import MQTT_device_family, MQTT_broker, MQTT_feed, sensor_command, sensor_actuacion, router_get, \
     router_parameter, reported_measure, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, \
-    DatadisCredentials, DatadisSupply, SystemConfiguration, DeviceMonitoring, DetectedAnomaly
+    DatadisCredentials, DatadisSupply, SystemConfiguration, DeviceMonitoring, DetectedAnomaly, DeviceTypeMapping, ExternalDeviceMapping
 from boreas_bot.models import DevicesNANOENVI, DevicesCO2, DevicesROUTERS
 
 @admin.register(MQTT_device_family)
@@ -539,3 +539,115 @@ class DetectedAnomalyAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+# --- External Device Integration Admin ---
+
+@admin.register(DeviceTypeMapping)
+class DeviceTypeMappingAdmin(admin.ModelAdmin):
+    list_display = ('external_device_type_name', 'get_mqtt_family', 'created_at')
+    list_filter = ('created_at', 'mqtt_device_family')
+    search_fields = ('external_device_type_name',)
+    raw_id_fields = ('mqtt_device_family',)
+    readonly_fields = ('created_at',)
+    fieldsets = (
+        ('Device Type Information', {
+            'fields': ('external_device_type_name', 'mqtt_device_family')
+        }),
+        ('Audit Information', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def get_mqtt_family(self, obj):
+        return obj.mqtt_device_family.name if obj.mqtt_device_family else "—"
+    get_mqtt_family.short_description = 'MQTT Family'
+
+
+@admin.register(ExternalDeviceMapping)
+class ExternalDeviceMappingAdmin(admin.ModelAdmin):
+    list_display = (
+        'external_device_id',
+        'external_alias',
+        'client_name',
+        'device_type_display',
+        'status',
+        'is_active',
+        'updated_at'
+    )
+    list_filter = ('status', 'is_active', 'client_name', 'created_at', 'updated_at')
+    search_fields = ('external_device_id', 'external_alias', 'client_name', 'location_name')
+    readonly_fields = ('created_at', 'updated_at', 'metadata_display', 'device_type_display', 'crawl_date_display')
+    date_hierarchy = 'updated_at'
+    
+    fieldsets = (
+        ('Device Identification', {
+            'fields': ('external_device_id', 'external_alias', 'internal_device_uuid')
+        }),
+        ('Organization & Location', {
+            'fields': ('client_name', 'location_name', 'group_name')
+        }),
+        ('Device Status', {
+            'fields': ('status', 'is_active'),
+            'description': 'Current status and activity state of the device'
+        }),
+        ('Device Lifecycle', {
+            'fields': ('purchase_date', 'sale_date'),
+            'description': 'Purchase and disposal dates'
+        }),
+        ('Device Metadata', {
+            'fields': ('device_type_display', 'crawl_date_display', 'metadata'),
+            'classes': ('wide',)
+        }),
+        ('Audit Information', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def device_type_display(self, obj):
+        return obj.device_type or "—"
+    device_type_display.short_description = 'Device Type (from metadata)'
+
+    def crawl_date_display(self, obj):
+        return obj.crawl_date if obj.crawl_date else "—"
+    crawl_date_display.short_description = 'Crawl Date (from metadata)'
+
+    def metadata_display(self, obj):
+        import json
+        return f'<pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto;">{json.dumps(obj.metadata, indent=2, ensure_ascii=False)}</pre>'
+    metadata_display.short_description = 'Metadata (JSON)'
+    metadata_display.allow_tags = True
+
+    actions = ['activate_devices', 'deactivate_devices', 'bulk_assign_group']
+
+    def activate_devices(self, request, queryset):
+        """Bulk activate selected devices"""
+        updated = queryset.update(is_active=True)
+        self.message_user(
+            request,
+            f'✓ {updated} device(s) activated',
+            messages.SUCCESS
+        )
+    activate_devices.short_description = "✓ Activate selected devices"
+
+    def deactivate_devices(self, request, queryset):
+        """Bulk deactivate selected devices"""
+        updated = queryset.update(is_active=False)
+        self.message_user(
+            request,
+            f'⛔ {updated} device(s) deactivated',
+            messages.WARNING
+        )
+    deactivate_devices.short_description = "⛔ Deactivate selected devices"
+
+    def bulk_assign_group(self, request, queryset):
+        """Placeholder for bulk group assignment"""
+        self.message_user(
+            request,
+            'Bulk group assignment feature coming soon',
+            messages.INFO
+        )
+    bulk_assign_group.short_description = "📁 Assign group to selected devices"
+
