@@ -1,6 +1,6 @@
 """
 Airflow DAG to dump reported_measure records to Parquet files.
-Runs daily at 2 AM, archives records older than 7 days.
+Runs daily at 2 AM, archives records older than 24 hours.
 """
 import sys
 import os
@@ -29,7 +29,7 @@ default_args = {
 with DAG(
     'dump_reported_measures_to_parquet',
     default_args=default_args,
-    description='Daily dump of old reported_measure records to Parquet',
+    description='Daily dump of reported_measure records older than 24 hours to Parquet',
     schedule_interval='0 2 * * *',  # 2 AM daily
     start_date=pendulum.parse('2026-02-06', strict=False),
     catchup=False,

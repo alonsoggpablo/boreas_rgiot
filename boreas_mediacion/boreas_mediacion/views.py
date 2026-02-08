@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes, action
 from django.utils import timezone
 from django.shortcuts import render
-from django.db.models import Max, F
+from django.db.models import Max, F, Subquery
 from django.views.generic import ListView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import MQTT_topic
@@ -64,6 +64,7 @@ class DeviceLastReadsView(LoginRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         from django.core.paginator import Paginator
+        from django.db import connection
         context = super().get_context_data(**kwargs)
         
         # Get filter parameters from request
@@ -71,54 +72,78 @@ class DeviceLastReadsView(LoginRequiredMixin, TemplateView):
         client_filter = self.request.GET.get('client')
         page_number = self.request.GET.get('page', 1)
         
-        # Get latest read per device using subquery
-        latest_reads = reported_measure.objects.values('device_id').annotate(
-            last_report=Max('report_time')
-        )
+        # PERFORMANCE: Default to most common client if none selected
+        if not client_filter:
+            client_filter = 'Ayuntamiento de Madrid'
         
-        # Build queryset with filters
-        queryset = reported_measure.objects.filter(
-            device_id__in=[lr['device_id'] for lr in latest_reads]
-        ).select_related('device_family_id')
+        # PERFORMANCE: Use shorter time window (last 2 hours) for better hypertable performance
+        hours = 2
         
-        # For each device, get only the latest record
-        result_dict = {}
-        for rm in queryset:
-            if rm.device_id not in result_dict or rm.report_time > result_dict[rm.device_id].report_time:
-                result_dict[rm.device_id] = rm
+        # Use raw SQL with window function for better hypertable performance
+        # This avoids DISTINCT ON which is slow across hypertable chunks
+        filters = ["rm.nanoenvi_client = %s"]  # Always require client filter for performance
+        params = [hours, client_filter]
         
-        device_list = list(result_dict.values())
-        
-        # Apply filters
         if family_filter:
-            device_list = [d for d in device_list if d.device_family_id and d.device_family_id.name == family_filter]
+            filters.append("f.name = %s")
+            params.append(family_filter)
         
-        if client_filter:
-            device_list = [d for d in device_list if d.nanoenvi_client == client_filter]
+        where_clause = " AND " + " AND ".join(filters)
         
-        # Sort by report_time descending (most recent first)
-        device_list.sort(key=lambda x: x.report_time, reverse=True)
+        # Optimized query using window function - much faster on hypertables
+        query = f"""
+            WITH latest_per_device AS (
+                SELECT 
+                    rm.id,
+                    rm.device_id,
+                    rm.report_time,
+                    rm.nanoenvi_name,
+                    rm.nanoenvi_client,
+                    rm.device_family_id_id,
+                    f.name as family_name,
+                    ROW_NUMBER() OVER (PARTITION BY rm.device_id ORDER BY rm.report_time DESC) as rn
+                FROM boreas_mediacion_reported_measure rm
+                LEFT JOIN boreas_mediacion_mqtt_device_family f ON rm.device_family_id_id = f.id
+                WHERE rm.report_time >= NOW() - INTERVAL '%s hours'{where_clause}
+            )
+            SELECT id, device_id, report_time, nanoenvi_name, nanoenvi_client, device_family_id_id, family_name
+            FROM latest_per_device
+            WHERE rn = 1
+            ORDER BY report_time DESC
+            LIMIT 200
+        """
         
-        # Paginate: 50 items per page
-        paginator = Paginator(device_list, 50)
-        page_obj = paginator.get_page(page_number)
+        with connection.cursor() as cursor:
+            cursor.execute(query, params)
+            columns = [col[0] for col in cursor.description]
+            results = [dict(zip(columns, row)) for row in cursor.fetchall()]
         
-        # Get unique families and clients for filter dropdowns
-        all_families = reported_measure.objects.filter(
-            device_family_id__isnull=False
-        ).values_list('device_family_id__name', flat=True).distinct().order_by('device_family_id__name')
+        total_devices = len(results)
         
-        all_clients = reported_measure.objects.filter(
-            nanoenvi_client__isnull=False
-        ).exclude(nanoenvi_client='').values_list('nanoenvi_client', flat=True).distinct().order_by('nanoenvi_client')
+        # Get unique families and clients for filter dropdowns (cached or from recent data only)
+        all_families = MQTT_device_family.objects.all().values_list('name', flat=True).order_by('name')
         
-        context['page_obj'] = page_obj
-        context['device_reads'] = page_obj.object_list
-        context['total_devices'] = len(device_list)
+        # Hardcoded client list for performance (avoid table scan)
+        all_clients = [
+            'Ayuntamiento de Madrid',
+            'Seresco',
+            'CCG',
+            'R&P',
+            'Metro de Madrid',
+            'Monica Paino Fuente',
+            'Dpto Energía-Uniovi',
+            'Alufonca',
+            'RG',
+            'RGIoT'
+        ]
+        
+        context['device_reads'] = results
+        context['total_devices'] = total_devices
         context['families'] = all_families
         context['clients'] = all_clients
         context['selected_family'] = family_filter
         context['selected_client'] = client_filter
+        context['time_window'] = f"Last {hours} hours"
         
         return context
 
@@ -142,7 +167,7 @@ class PublishView(APIView):
         mqtt_keepalive = MQTT_broker.objects.filter(name='rgiot').values_list('keepalive', flat=True)[0]
         mqtt_user = MQTT_broker.objects.filter(name='rgiot').values_list('user', flat=True)[0]
         mqtt_password = MQTT_broker.objects.filter(name='rgiot').values_list('password', flat=True)[0]
-
+        
         MQTT_SERVER = mqtt_server
         MQTT_PORT = mqtt_port
         MQTT_KEEPALIVE = mqtt_keepalive

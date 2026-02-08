@@ -122,6 +122,10 @@
 
 {% block content %}
         <h1>Device Last Reads Dashboard</h1>
+        <p style="color: #666; font-size: 0.9em; margin-bottom: 15px;">
+            Showing devices from <strong>{{ time_window }}</strong> 
+            (Client filter required for performance)
+        </p>
         
         <div class="filters">
             <form method="get" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">

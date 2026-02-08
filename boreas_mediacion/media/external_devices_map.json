@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-06T13:00:01.859167Z",
+  "generated_at": "2026-02-08T14:00:05.760814Z",
   "count": 454,
   "devices": {
     "94e5efed-bb9e-4dc1-9177-a7fedc53fcf6": {
@@ -557,29 +557,19 @@
       "client": "Seresco",
       "source": "nanoenvi"
     },
-    "9ef1b271-7d6f-497c-912b-0e2f72c639d2": {
-      "name": "Feria 0090",
-      "client": "CCG",
-      "source": "nanoenvi"
-    },
     "a0c26db0-0f2b-4b8d-9bc9-502737e8ff46": {
       "name": null,
       "client": null,
       "source": "nanoenvi"
     },
+    "9ef1b271-7d6f-497c-912b-0e2f72c639d2": {
+      "name": "Feria 0090",
+      "client": "CCG",
+      "source": "nanoenvi"
+    },
     "cb6c7d63-0b1e-4e5a-b752-f744904143a7": {
       "name": "Seresco 0110",
       "client": "Seresco",
-      "source": "nanoenvi"
-    },
-    "e92d8154-f200-4816-b4e7-c29ef39ae42d": {
-      "name": "Seresco 0069",
-      "client": "Seresco",
-      "source": "nanoenvi"
-    },
-    "302aa735-b2d4-4cda-94d3-ea4b577db960": {
-      "name": null,
-      "client": null,
       "source": "nanoenvi"
     },
     "7c4c6107-d4b4-4591-ab41-97b124349ba3": {
@@ -592,9 +582,24 @@
       "client": "R&P",
       "source": "nanoenvi"
     },
+    "e92d8154-f200-4816-b4e7-c29ef39ae42d": {
+      "name": "Seresco 0069",
+      "client": "Seresco",
+      "source": "nanoenvi"
+    },
     "1aa4a6a1-04a1-4868-b065-26c3ac287deb": {
       "name": "Seresco 0112",
       "client": "Seresco",
+      "source": "nanoenvi"
+    },
+    "302aa735-b2d4-4cda-94d3-ea4b577db960": {
+      "name": null,
+      "client": null,
+      "source": "nanoenvi"
+    },
+    "cb17c90b-75b3-44ed-92b7-7372f289abd2": {
+      "name": "Metro 0100",
+      "client": "Metro de Madrid",
       "source": "nanoenvi"
     },
     "501e18f2-58c2-4832-bdc4-037122dc1c86": {
@@ -607,24 +612,14 @@
       "client": "Alufonca",
       "source": "nanoenvi"
     },
-    "bae5b8c6-7b50-40f7-a708-498581a3c5d4": {
-      "name": "Metro 0125",
-      "client": "Metro de Madrid",
-      "source": "nanoenvi"
-    },
     "c02d15bd-9e65-409e-8399-630b50c79a92": {
       "name": null,
       "client": null,
       "source": "nanoenvi"
     },
-    "cb17c90b-75b3-44ed-92b7-7372f289abd2": {
-      "name": "Metro 0100",
+    "bae5b8c6-7b50-40f7-a708-498581a3c5d4": {
+      "name": "Metro 0125",
       "client": "Metro de Madrid",
-      "source": "nanoenvi"
-    },
-    "9008f641-2d23-4813-b554-a97ae3ea4759": {
-      "name": null,
-      "client": null,
       "source": "nanoenvi"
     },
     "b27e06ab-a72c-491f-8c2a-1cc4ea3854a6": {
@@ -642,9 +637,9 @@
       "client": "Ayuntamiento de Madrid",
       "source": "nanoenvi"
     },
-    "dc8685cc-149e-4ea1-bce4-1e60c53a3dbb": {
-      "name": "MAD_56",
-      "client": "Ayuntamiento de Madrid",
+    "9008f641-2d23-4813-b554-a97ae3ea4759": {
+      "name": null,
+      "client": null,
       "source": "nanoenvi"
     },
     "2907f342-6541-4baf-be62-ec9cabd74a95": {
@@ -652,19 +647,19 @@
       "client": "RGIoT",
       "source": "nanoenvi"
     },
-    "8911f350-aeae-4b9b-bfac-f1abcb67674d": {
-      "name": null,
-      "client": null,
-      "source": "nanoenvi"
-    },
     "c1db3b2e-7852-42fa-ad97-e4c0758ac928": {
       "name": "Seresco 0108",
       "client": "Seresco",
       "source": "nanoenvi"
     },
-    "87125590-b745-41b1-86c6-3d06c5c90f20": {
-      "name": "Seresco 0102",
-      "client": "Seresco",
+    "dc8685cc-149e-4ea1-bce4-1e60c53a3dbb": {
+      "name": "MAD_56",
+      "client": "Ayuntamiento de Madrid",
+      "source": "nanoenvi"
+    },
+    "8911f350-aeae-4b9b-bfac-f1abcb67674d": {
+      "name": null,
+      "client": null,
       "source": "nanoenvi"
     },
     "800b56e5-4278-4bcd-8d91-ad5949c6d2bb": {
@@ -675,6 +670,11 @@
     "621632ba-e908-432b-b906-68fac8bb0944": {
       "name": "MAD_42",
       "client": "Ayuntamiento de Madrid",
+      "source": "nanoenvi"
+    },
+    "87125590-b745-41b1-86c6-3d06c5c90f20": {
+      "name": "Seresco 0102",
+      "client": "Seresco",
       "source": "nanoenvi"
     },
     "e7d73638-58a1-4e23-ac5a-11bf39bec6f9": {
@@ -707,14 +707,14 @@
       "client": "Ayuntamiento de Madrid",
       "source": "nanoenvi"
     },
-    "bfbbe218-44a6-4226-806b-cbf126e9f91d": {
-      "name": null,
-      "client": null,
-      "source": "nanoenvi"
-    },
     "55c80e1d-0f15-4853-87db-0159f06e9a42": {
       "name": "MAD_34",
       "client": "Ayuntamiento de Madrid",
+      "source": "nanoenvi"
+    },
+    "bfbbe218-44a6-4226-806b-cbf126e9f91d": {
+      "name": null,
+      "client": null,
       "source": "nanoenvi"
     },
     "9e264509-92ff-4719-9e12-700e59de6dbb": {
@@ -2007,68 +2007,8 @@
       "client": null,
       "source": "shellies"
     },
-    "shellyem3-E89F6D8494B9": {
-      "name": "CONSH3S023",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-E89F6D84D480": {
-      "name": "CONSH3S017",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-BCFF4DFD1E6E": {
-      "name": "CONSH3S024",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-E89F6D84D904": {
-      "name": "CONSH3S015",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-E89F6D84B567": {
-      "name": "CONSH3S033",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-E89F6D84A9D4": {
-      "name": "CONSH3S062",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-E89F6D852824": {
-      "name": "CONSH3S025",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-E89F6D852218": {
-      "name": "CONSH3S070",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-E89F6D84874A": {
-      "name": "CONSH3S055",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-E89F6D84AB7B": {
-      "name": "CONSH3S044",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-E89F6D850980": {
-      "name": "CONSH3S050",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-E89F6D849228": {
-      "name": "CONSH3S002",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-BCFF4DFD1D53": {
-      "name": "CONSH3S048",
+    "shellyem3-E89F6D852B97": {
+      "name": "CONSH3S001",
       "client": null,
       "source": "shellies"
     },
@@ -2077,53 +2017,8 @@
       "client": null,
       "source": "shellies"
     },
-    "shellyem3-E89F6D8499BF": {
-      "name": "CONSH3S041",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-BCFF4DFD1AE7": {
-      "name": "CONSH3S011",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-E89F6D8492FD": {
-      "name": "CONSH3S039",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-E89F6D852B97": {
-      "name": "CONSH3S001",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-E89F6D84B992": {
-      "name": "CONSH3S004",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-BCFF4DFD1BF2": {
-      "name": "CONSH3S031",
-      "client": null,
-      "source": "shellies"
-    },
     "shellyem3-E89F6D848C0E": {
       "name": "CONSH3S035",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-E89F6D849959": {
-      "name": "CONSH3S018",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-BCFF4DFD1D81": {
-      "name": "CONSH3S069",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-E89F6D849270": {
-      "name": "CONSH3S045",
       "client": null,
       "source": "shellies"
     },
@@ -2132,8 +2027,118 @@
       "client": null,
       "source": "shellies"
     },
+    "shellyem3-E89F6D849270": {
+      "name": "CONSH3S045",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-E89F6D852615": {
+      "name": "CONSH3S022",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-E89F6D84B992": {
+      "name": "CONSH3S004",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-E89F6D84874A": {
+      "name": "CONSH3S055",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-BCFF4DFD1D81": {
+      "name": "CONSH3S069",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-E89F6D8492FD": {
+      "name": "CONSH3S039",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-BCFF4DFD1D53": {
+      "name": "CONSH3S048",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-BCFF4DFD1BF2": {
+      "name": "CONSH3S031",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-BCFF4DFD1E6E": {
+      "name": "CONSH3S024",
+      "client": null,
+      "source": "shellies"
+    },
     "shellyem3-E89F6D84AC6A": {
       "name": "CONSH3S058",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-E89F6D849959": {
+      "name": "CONSH3S018",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-E89F6D84D904": {
+      "name": "CONSH3S015",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-E89F6D8498BC": {
+      "name": "CONSH3S049",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-E89F6D850FA6": {
+      "name": "CONSH3S028",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-E89F6D84AB7B": {
+      "name": "CONSH3S044",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-BCFF4DFD1CCA": {
+      "name": "CONSH3S005",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-BCFF4DFD1450": {
+      "name": "CONSH30022",
+      "client": "RG",
+      "source": "shellies"
+    },
+    "shellyem3-E89F6D8494B9": {
+      "name": "CONSH3S023",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-BCFF4DFD1BC9": {
+      "name": "CONSH3S009",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-E89F6D84D480": {
+      "name": "CONSH3S017",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-E89F6D84A9D4": {
+      "name": "CONSH3S062",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-E89F6D84B567": {
+      "name": "CONSH3S033",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-E89F6D850980": {
+      "name": "CONSH3S050",
       "client": null,
       "source": "shellies"
     },
@@ -2157,28 +2162,18 @@
       "client": null,
       "source": "shellies"
     },
-    "shellyem3-BCFF4DFD1CCA": {
-      "name": "CONSH3S005",
-      "client": null,
-      "source": "shellies"
-    },
     "shellyem3-E89F6D84AA65": {
       "name": "CONSH3S008",
       "client": null,
       "source": "shellies"
     },
-    "shellyem3-BCFF4DFD1BC9": {
-      "name": "CONSH3S009",
+    "shellyem3-BCFF4DFD1D79": {
+      "name": "CONSH3S020",
       "client": null,
       "source": "shellies"
     },
-    "shellyem3-E89F6D8498BC": {
-      "name": "CONSH3S049",
-      "client": null,
-      "source": "shellies"
-    },
-    "shellyem3-E89F6D850FA6": {
-      "name": "CONSH3S028",
+    "shellyem3-E89F6D849228": {
+      "name": "CONSH3S002",
       "client": null,
       "source": "shellies"
     },
@@ -2187,18 +2182,23 @@
       "client": null,
       "source": "shellies"
     },
-    "shellyem3-BCFF4DFD1450": {
-      "name": "CONSH30022",
-      "client": "RG",
-      "source": "shellies"
-    },
-    "shellyem3-BCFF4DFD1D79": {
-      "name": "CONSH3S020",
+    "shellyem3-E89F6D8499BF": {
+      "name": "CONSH3S041",
       "client": null,
       "source": "shellies"
     },
-    "shellyem3-E89F6D852615": {
-      "name": "CONSH3S022",
+    "shellyem3-BCFF4DFD1AE7": {
+      "name": "CONSH3S011",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-E89F6D852824": {
+      "name": "CONSH3S025",
+      "client": null,
+      "source": "shellies"
+    },
+    "shellyem3-E89F6D852218": {
+      "name": "CONSH3S070",
       "client": null,
       "source": "shellies"
     },
@@ -2207,13 +2207,13 @@
       "client": null,
       "source": "shellies"
     },
-    "shellyem3-E89F6D849678": {
-      "name": "CONSH3S010",
+    "shellyem3-E89F6D849472": {
+      "name": "CONSH3S003",
       "client": null,
       "source": "shellies"
     },
-    "shellyem3-E89F6D849472": {
-      "name": "CONSH3S003",
+    "shellyem3-E89F6D849678": {
+      "name": "CONSH3S010",
       "client": null,
       "source": "shellies"
     },
@@ -2222,8 +2222,8 @@
       "client": null,
       "source": "shellies"
     },
-    "shellyem3-E89F6D84D3CD": {
-      "name": "CONSH3S012",
+    "shellyem3-E89F6D84A857": {
+      "name": "CONSH3S013",
       "client": null,
       "source": "shellies"
     },
@@ -2237,8 +2237,8 @@
       "client": null,
       "source": "shellies"
     },
-    "shellyem3-E89F6D84A857": {
-      "name": "CONSH3S013",
+    "shellyem3-E89F6D84D3CD": {
+      "name": "CONSH3S012",
       "client": null,
       "source": "shellies"
     },

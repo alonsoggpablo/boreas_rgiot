@@ -1,6 +1,7 @@
 """
-Dump reported_measure records older than 7 days to Parquet files.
-Keeps rolling 7-day window in PostgreSQL, archives older data to Parquet.
+Dump reported_measure records to Parquet files before TimescaleDB retention policy deletes them.
+TimescaleDB retention policy: 24 hours
+This script dumps data between 20-23 hours old to ensure archival before auto-deletion.
 """
 import os
 import sys
@@ -17,10 +18,19 @@ django.setup()
 
 from boreas_mediacion.models import reported_measure
 from django.db.models import Q
+from django.utils import timezone
 
 # Configuration
 PARQUET_DIR = '/app/data/reported_measures_archive'
-RETENTION_DAYS = 7
+RETENTION_HOURS = 24
+ARCHIVE_START_HOURS = 23  # Start archiving at 23 hours old
+ARCHIVE_END_HOURS = 20    # Archive up to 20 hours old
+
+def _ensure_aware(dt):
+    """Ensure datetime is timezone-aware using current timezone."""
+    if timezone.is_naive(dt):
+        return timezone.make_aware(dt, timezone.get_current_timezone())
+    return dt
 
 def ensure_parquet_dir():
     """Create parquet directory if it doesn't exist."""
@@ -82,63 +92,68 @@ def dump_date_range(start_date, end_date):
         print(f"  ✗ Error dumping {start_date.date()}: {e}")
         return False
 
-def cleanup_old_records(retention_days):
+def cleanup_old_records(cutoff_date):
     """
-    Delete records older than retention_days from PostgreSQL.
-    Only deletes after successful Parquet dump.
+    NOTE: Deletion is handled by TimescaleDB retention policy (24 hours).
+    This function is kept for compatibility but does nothing.
+    Django model is managed=False, so Django should not delete from hypertable.
     """
-    cutoff_date = datetime.now() - timedelta(days=retention_days)
-    
-    count, _ = reported_measure.objects.filter(
-        report_time__lt=cutoff_date
-    ).delete()
-    
-    if count > 0:
-        print(f"✓ Deleted {count} records older than {retention_days} days")
-    return count
+    print(f"ℹ Skipping manual deletion - TimescaleDB retention policy handles this automatically")
+    return 0
 
 def dump_to_parquet():
-    """Main function: dump all records older than RETENTION_DAYS to Parquet."""
+    """Main function: dump data between 20-23 hours old before TimescaleDB retention deletes it."""
     print(f"\n{'='*60}")
-    print(f"Dumping reported_measures to Parquet (retention: {RETENTION_DAYS} days)")
+    print(f"Dumping reported_measures to Parquet")
+    print(f"Archive window: {ARCHIVE_END_HOURS}-{ARCHIVE_START_HOURS} hours old")
+    print(f"TimescaleDB retention: {RETENTION_HOURS} hours")
     print(f"{'='*60}")
     
     ensure_parquet_dir()
     
-    # Calculate date range to dump: everything older than retention window
-    now = datetime.now()
-    cutoff_date = now - timedelta(days=RETENTION_DAYS)
+    # Calculate date range to dump: data between ARCHIVE_END_HOURS and ARCHIVE_START_HOURS old
+    now = timezone.now()
+    archive_start = now - timedelta(hours=ARCHIVE_START_HOURS)
+    archive_end = now - timedelta(hours=ARCHIVE_END_HOURS)
     
-    # Get earliest record
-    earliest = reported_measure.objects.order_by('report_time').first()
-    if not earliest:
-        print("No records to dump.")
+    # Query records in the archive window
+    queryset = reported_measure.objects.filter(
+        report_time__gte=archive_start,
+        report_time__lt=archive_end
+    ).order_by('report_time')
+    
+    count = queryset.count()
+    if count == 0:
+        print(f"No records in archive window ({archive_start} to {archive_end})")
         return
     
-    print(f"Date range: {earliest.report_time.date()} to {cutoff_date.date()}")
-    print(f"Dumping in daily chunks...\n")
+    print(f"Date range: {archive_start} to {archive_end}")
+    print(f"Records to archive: {count}\n")
     
     # Dump each day as separate Parquet file
-    current_date = earliest.report_time.date()
+    current_date = archive_start.date()
     dumped_count = 0
     
-    while current_date < cutoff_date.date():
-        start = datetime.combine(current_date, datetime.min.time())
-        end = start + timedelta(days=1)
+    while current_date <= archive_end.date():
+        start = _ensure_aware(datetime.combine(current_date, datetime.min.time()))
+        end = min(start + timedelta(days=1), archive_end)
         
-        if dump_date_range(start, end):
+        # Ensure we don't go beyond archive window
+        if start >= archive_end:
+            break
+            
+        if dump_date_range(max(start, archive_start), end):
             dumped_count += 1
         
         current_date += timedelta(days=1)
+
+    print(f"\n✓ Dumped {dumped_count} file(s) to Parquet")
     
-    print(f"\n✓ Dumped {dumped_count} days to Parquet")
-    
-    # Clean up old records from PostgreSQL
-    print("\nCleaning up old records from PostgreSQL...")
-    deleted = cleanup_old_records(RETENTION_DAYS)
+    # Note about cleanup
+    print(f"\nℹ Records older than {RETENTION_HOURS}h will be auto-deleted by TimescaleDB retention policy")
     
     print(f"\n{'='*60}")
-    print(f"Done! Kept {RETENTION_DAYS} days in PostgreSQL, archived rest to Parquet.")
+    print(f"Done! Archived {count} records to Parquet. TimescaleDB manages retention.")
     print(f"{'='*60}\n")
 
 if __name__ == '__main__':

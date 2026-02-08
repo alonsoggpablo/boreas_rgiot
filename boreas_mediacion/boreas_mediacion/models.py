@@ -25,8 +25,11 @@ class reported_measure(models.Model):
     nanoenvi_client = models.CharField(max_length=255, null=True, blank=True, help_text='Client from devicesNANOENVI')
 
     class Meta:
+        managed = False
+        db_table = 'boreas_mediacion_reported_measure'
         indexes = [
             models.Index(fields=['device_id', 'feed', 'report_time']),
+            models.Index(fields=['device_id', 'report_time']),
         ]
 
 # --- External Device Monitoring ---
