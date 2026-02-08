@@ -4,6 +4,7 @@ Runs daily at 2 AM, archives records older than 24 hours.
 """
 import sys
 import os
+import importlib.util
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
@@ -14,9 +15,17 @@ def dump_reported_measures(**context):
     sys.path.insert(0, '/app/boreas_mediacion')
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'boreas_mediacion.settings')
     
-    # Import and run the dump script
-    import dump_reported_measures_to_parquet
-    dump_reported_measures_to_parquet.dump_to_parquet()
+    # Import the actual module from boreas_mediacion package
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "dump_module", 
+        "/app/boreas_mediacion/dump_reported_measures_to_parquet.py"
+    )
+    dump_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(dump_module)
+    
+    # Execute the dump function
+    dump_module.dump_to_parquet()
     print("✓ Parquet dump completed successfully")
 
 # DAG Configuration
