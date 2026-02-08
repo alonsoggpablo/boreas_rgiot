@@ -3,41 +3,29 @@ from django.contrib.admin import SimpleListFilter
 from .models import MQTT_device_family, MQTT_broker, MQTT_feed, sensor_command, sensor_actuacion, router_get, \
     router_parameter, reported_measure, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, \
     DatadisCredentials, DatadisSupply, SystemConfiguration, DeviceMonitoring, DetectedAnomaly, DeviceTypeMapping, ExternalDeviceMapping
-from boreas_bot.models import DevicesNANOENVI, DevicesCO2, DevicesROUTERS
 
 @admin.register(MQTT_device_family)
 class MQTTDeviceFamilyAdmin(admin.ModelAdmin):
     list_display = ('id', 'name')
 
-# Custom filters for DeviceMonitoring
+# Custom filters for DeviceMonitoring - uses local ExternalDeviceMapping table
 class DeviceNameFilter(SimpleListFilter):
     title = 'Device Name'
     parameter_name = 'device_name'
 
     def lookups(self, request, model_admin):
+        """Get unique device names from ExternalDeviceMapping (external_alias if available)"""
         names = set()
-        for d in DevicesNANOENVI.objects.filter(name__isnull=False).values_list('name', flat=True):
-            if d:
-                names.add(d)
-        for d in DevicesCO2.objects.filter(name__isnull=False).values_list('name', flat=True):
-            if d:
-                names.add(d)
-        for d in DevicesROUTERS.objects.filter(name__isnull=False).values_list('name', flat=True):
-            if d:
-                names.add(d)
+        for alias in ExternalDeviceMapping.objects.filter(external_alias__isnull=False).values_list('external_alias', flat=True):
+            if alias:
+                names.add(alias)
         return [(name, name) for name in sorted(names)]
 
     def queryset(self, request, queryset):
         if self.value():
-            # Get UUIDs matching this name from all device tables
-            uuids = set()
-            for d in DevicesNANOENVI.objects.filter(name=self.value()):
-                uuids.add(str(d.uuid))
-            for d in DevicesCO2.objects.filter(name=self.value()):
-                uuids.add(str(d.id))
-            for d in DevicesROUTERS.objects.filter(name=self.value()):
-                uuids.add(str(d.id))
-            return queryset.filter(uuid__in=uuids)
+            # Get external_device_ids matching this alias from ExternalDeviceMapping
+            uuids = set(ExternalDeviceMapping.objects.filter(external_alias=self.value()).values_list('external_device_id', flat=True))
+            return queryset.filter(uuid__in=uuids) if uuids else queryset
         return queryset
 
 
@@ -46,24 +34,15 @@ class DeviceClientFilter(SimpleListFilter):
     parameter_name = 'device_client'
 
     def lookups(self, request, model_admin):
-        clients = set()
-        for c in DevicesNANOENVI.objects.filter(client__isnull=False).values_list('client', flat=True):
-            if c:
-                clients.add(c)
-        for c in DevicesCO2.objects.filter(client__isnull=False).values_list('client', flat=True):
-            if c:
-                clients.add(c)
-        return [(client, client) for client in sorted(clients)]
+        """Get unique clients from ExternalDeviceMapping"""
+        clients = set(ExternalDeviceMapping.objects.filter(client_name__isnull=False).values_list('client_name', flat=True))
+        return [(client, client) for client in sorted(clients) if client]
 
     def queryset(self, request, queryset):
         if self.value():
-            # Get UUIDs matching this client
-            uuids = set()
-            for d in DevicesNANOENVI.objects.filter(client=self.value()):
-                uuids.add(str(d.uuid))
-            for d in DevicesCO2.objects.filter(client=self.value()):
-                uuids.add(str(d.id))
-            return queryset.filter(uuid__in=uuids)
+            # Get external_device_ids matching this client from ExternalDeviceMapping
+            uuids = set(ExternalDeviceMapping.objects.filter(client_name=self.value()).values_list('external_device_id', flat=True))
+            return queryset.filter(uuid__in=uuids) if uuids else queryset
         return queryset
 
 # Register reported_measure in admin
@@ -81,37 +60,35 @@ class ReportedMeasureAdmin(admin.ModelAdmin):
 # Register DeviceMonitoring in admin
 @admin.register(DeviceMonitoring)
 class DeviceMonitoringAdmin(admin.ModelAdmin):
-    list_display = ('uuid', 'source', 'device_name', 'device_client', 'monitored', 'updated_at')
-    list_filter = ('source', DeviceClientFilter, DeviceNameFilter, 'monitored', 'updated_at')
+    list_display = ('uuid', 'device_type', 'device_name', 'device_client', 'monitored', 'updated_at')
+    list_filter = (DeviceClientFilter, DeviceNameFilter, 'monitored', 'updated_at')
     search_fields = ('uuid',)
     readonly_fields = ('created_at', 'updated_at')
     date_hierarchy = 'updated_at'
     actions = ['mark_monitored', 'mark_not_monitored']
+    # Show client and filter external_device choices by client in creation form
+    def get_fields(self, request, obj=None):
+        if obj is None:
+            return ['external_device', 'monitored']
+        return ['uuid', 'external_device', 'monitored', 'created_at', 'updated_at']
+
+    # Use default form, show all external devices
+
+    def device_type(self, obj):
+        return obj.device_type or '-'
+    device_type.short_description = 'Type'
 
     def device_name(self, obj):
-        """Fetch name from external device model"""
-        if obj.source == 'nanoenvi':
-            device = DevicesNANOENVI.objects.filter(uuid=obj.uuid).first()
-            return device.name if device else '-'
-        elif obj.source == 'co2':
-            device = DevicesCO2.objects.filter(id=obj.uuid).first()
-            return device.name if device else '-'
-        elif obj.source == 'routers':
-            device = DevicesROUTERS.objects.filter(id=obj.uuid).first()
-            return device.name if device else '-'
-        return '-'
+        """Fetch name from linked ExternalDeviceMapping"""
+        if obj.external_device:
+            return obj.external_device.external_alias or obj.external_device.external_device_id
+        return obj.uuid
     device_name.short_description = 'Name'
 
     def device_client(self, obj):
-        """Fetch client from external device model"""
-        if obj.source == 'nanoenvi':
-            device = DevicesNANOENVI.objects.filter(uuid=obj.uuid).first()
-            return device.client if device else '-'
-        elif obj.source == 'co2':
-            device = DevicesCO2.objects.filter(id=obj.uuid).first()
-            return device.client if device else '-'
-        elif obj.source == 'routers':
-            return '-'  # Routers don't have client field
+        """Fetch client from linked ExternalDeviceMapping"""
+        if obj.external_device and obj.external_device.client_name:
+            return obj.external_device.client_name
         return '-'
     device_client.short_description = 'Client'
 
@@ -565,20 +542,48 @@ class DeviceTypeMappingAdmin(admin.ModelAdmin):
     get_mqtt_family.short_description = 'MQTT Family'
 
 
+class DeviceTypeFilter(SimpleListFilter):
+    title = 'Device Type'
+    parameter_name = 'device_type'
+
+    def lookups(self, request, model_admin):
+        # Get unique device types from metadata
+        device_types = set()
+        for record in ExternalDeviceMapping.objects.all():
+            device_type = record.metadata.get('device_type')
+            if device_type:
+                device_types.add(device_type)
+        return [(dt, dt) for dt in sorted(device_types)]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(metadata__device_type=self.value())
+        return queryset
+
+
 @admin.register(ExternalDeviceMapping)
 class ExternalDeviceMappingAdmin(admin.ModelAdmin):
     list_display = (
         'external_device_id',
         'external_alias',
         'client_name',
+        'group_name',
         'device_type_display',
         'status',
         'is_active',
         'updated_at'
     )
-    list_filter = ('status', 'is_active', 'client_name', 'created_at', 'updated_at')
-    search_fields = ('external_device_id', 'external_alias', 'client_name', 'location_name')
-    readonly_fields = ('created_at', 'updated_at', 'metadata_display', 'device_type_display', 'crawl_date_display')
+    list_filter = (
+        'status',
+        DeviceTypeFilter,
+        'is_active',
+        'client_name',
+        'group_name',
+        'created_at',
+        'updated_at'
+    )
+    search_fields = ('external_device_id', 'external_alias', 'client_name', 'location_name', 'group_name')
+    readonly_fields = ('created_at', 'updated_at', 'metadata_display', 'device_type_display', 'group_name_display', 'crawl_date_display')
     date_hierarchy = 'updated_at'
     
     fieldsets = (
@@ -597,7 +602,7 @@ class ExternalDeviceMappingAdmin(admin.ModelAdmin):
             'description': 'Purchase and disposal dates'
         }),
         ('Device Metadata', {
-            'fields': ('device_type_display', 'crawl_date_display', 'metadata'),
+            'fields': ('device_type_display', 'group_name_display', 'crawl_date_display', 'metadata'),
             'classes': ('wide',)
         }),
         ('Audit Information', {
@@ -609,6 +614,10 @@ class ExternalDeviceMappingAdmin(admin.ModelAdmin):
     def device_type_display(self, obj):
         return obj.device_type or "—"
     device_type_display.short_description = 'Device Type (from metadata)'
+
+    def group_name_display(self, obj):
+        return obj.metadata.get('group_name', '—')
+    group_name_display.short_description = 'Group Name (from metadata)'
 
     def crawl_date_display(self, obj):
         return obj.crawl_date if obj.crawl_date else "—"

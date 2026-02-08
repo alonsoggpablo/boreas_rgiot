@@ -1,0 +1,34 @@
+<!-- boreas_mediacion/templates/boreas_mediacion/devices_tables.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Database Tables</title>
+  <style>
+    body { background: #f7f7f9; font-family: sans-serif; margin: 0; padding: 20px; }
+    h1 { color: #222; }
+    ul { list-style-type: none; padding: 0; }
+    ul li { 
+      background: #fff; 
+      margin: 8px 0; 
+      padding: 12px; 
+      border-radius: 4px; 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.04); 
+      font-family: monospace;
+      color: #666;
+    }
+    .container { max-width: 600px; margin: 0 auto; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Database Tables (devices*)</h1>
+    <ul>
+      {% for table in tables %}
+        <li>{{ table }}</li>
+      {% empty %}
+        <li>No device tables found</li>
+      {% endfor %}
+    </ul>
+  </div>
+</body>
+</html>

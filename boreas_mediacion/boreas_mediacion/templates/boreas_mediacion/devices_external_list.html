@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}External Devices Inventory - Boreas{% endblock %}
+
+{% block extra_head %}
+<style>
+  .device-stats {
+    margin-bottom: 20px; 
+    background: #f0f2f5; 
+    padding: 12px; 
+    border-radius: 4px;
+    display: flex;
+    gap: 30px;
+  }
+  .device-stats strong { color: #007bff; }
+  
+  .filter-form {
+    margin-bottom: 30px; 
+    display: flex; 
+    gap: 10px; 
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .filter-form input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; }
+  .filter-form button { padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+  .filter-form button:hover { background: #0056b3; }
+  
+  .upload-section {
+    background: #f9f9f9;
+    padding: 16px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    border: 1px dashed #ddd;
+  }
+  .upload-section h3 { margin-bottom: 12px; }
+  .upload-section input[type="file"] { margin-right: 10px; }
+  
+  .table-wrapper {
+    overflow-x: auto;
+    margin-top: 20px;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95em;
+  }
+  thead tr { background: #f0f2f5; }
+  thead th {
+    padding: 12px 8px;
+    text-align: left;
+    border: 1px solid #ddd;
+    font-weight: 600;
+  }
+  tbody td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    word-wrap: break-word;
+    max-width: 200px;
+  }
+  tbody tr:nth-child(even) { background: #f9fafb; }
+  tbody tr:hover { background: #e6f7ff; }
+  
+  .metadata-detail {
+    background: #f9f9f9;
+    padding: 8px;
+    border-radius: 3px;
+    font-size: 0.8em;
+    overflow: auto;
+    max-height: 150px;
+  }
+  
+  .filter-input {
+    width: 85%; 
+    padding: 2px 4px; 
+    font-size: 0.9em;
+    border: 1px solid #ddd;
+    border-radius: 2px;
+    margin-top: 4px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% load get_field %}
+
+<h1>External Devices Inventory</h1>
+
+<form method="get" class="filter-form">
+  <label for="name"><strong>Filter by name, ID, or client:</strong></label>
+  <input type="text" id="name" name="name" value="{{ name_filter }}" placeholder="Search...">
+  <button type="submit">Search</button>
+  {% if name_filter %}
+    <a href="?" style="color: #0074d9; text-decoration: underline; padding: 8px 0;">Clear filter</a>
+  {% endif %}
+</form>
+
+<div class="device-stats">
+  <div><strong>Total Devices:</strong> <span style="color: #007bff; font-size: 1.2em;">{{ total_count }}</span></div>
+  <div><strong>Displayed:</strong> <span style="color: #28a745; font-size: 1.2em;">{{ filtered_count }}</span></div>
+</div>
+
+<div class="upload-section">
+  <h3>Bulk Upload Devices</h3>
+  <div id="mockup-loader">
+    <input type="file" id="mockup-file" accept=".json,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,.xlsx,.xls" placeholder="Select JSON or XLSX file">
+    <button type="button" onclick="loadMockupFile()" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Load File</button>
+    <div id="mockup-table-container" style="margin-top: 15px;"></div>
+  </div>
+</div>
+
+<div class="table-wrapper">
+  <table id="devices-table">
+    <thead>
+      <tr>
+        {% for field in device_fields %}
+          <th>
+            {{ field|title }}<br>
+            <input type="text" class="filter-input" data-table="devices-table" data-col="{{ forloop.counter0 }}">
+          </th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+    {% for device in devices %}
+    <tr>
+      {% for field in device_fields %}
+        <td>
+          {% if field == 'metadata' %}
+            <details style="cursor: pointer;">
+              <summary style="color: #007bff; font-weight: 500;">View JSON</summary>
+              <div class="metadata-detail">{{ device|get_field:field|safe }}</div>
+            </details>
+          {% elif field == 'purchase_date' or field == 'sale_date' %}
+            {{ device|get_field:field|date:"Y-m-d" }}
+          {% else %}
+            {{ device|get_field:field }}
+          {% endif %}
+        </td>
+      {% endfor %}
+    </tr>
+    {% empty %}
+    <tr><td colspan="999" style="text-align: center; padding: 20px; color: #999;">No devices match filter</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+function loadMockupFile() {
+  var fileInput = document.getElementById('mockup-file');
+  var container = document.getElementById('mockup-table-container');
+  container.innerHTML = '';
+  if (!fileInput.files.length) {
+    alert('Please select a file');
+    return;
+  }
+  var file = fileInput.files[0];
+  var formData = new FormData();
+  formData.append('file', file);
+  
+  fetch('/api/upload-mockup-file/', {
+    method: 'POST',
+    body: formData,
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    credentials: 'same-origin'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'success') {
+      var jsonData = data.data;
+      if (!Array.isArray(jsonData)) jsonData = [jsonData];
+      if (!jsonData.length) { 
+        container.innerHTML = '<em>No data in file</em>'; 
+        return; 
+      }
+      var fields = Object.keys(jsonData[0]);
+      var html = '<table style="width:100%; border-collapse:collapse; margin-top:10px;">';
+      html += '<thead><tr>' + fields.map(f => '<th style="background:#f0f2f5; padding:8px; border:1px solid #ddd;">' + f + '</th>').join('') + '</tr></thead>';
+      html += '<tbody>';
+      jsonData.forEach(row => {
+        html += '<tr>' + fields.map(f => '<td style="padding:8px; border:1px solid #ddd;">' + (row[f] ?? '') + '</td>').join('') + '</tr>';
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    } else {
+      container.innerHTML = '<span style="color: red;">Error: ' + (data.message || 'Upload failed') + '</span>';
+    }
+  })
+  .catch(err => {
+    container.innerHTML = '<span style="color: red;">Error: ' + err.message + '</span>';
+  });
+}
+
+// Table filtering
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.filter-input').forEach(function(input) {
+    input.addEventListener('input', function() {
+      var tableId = input.getAttribute('data-table');
+      var col = parseInt(input.getAttribute('data-col'));
+      var table = document.getElementById(tableId);
+      var rows = table.querySelectorAll('tbody tr');
+      
+      rows.forEach(function(row) {
+        var show = true;
+        input.parentElement.parentElement.querySelectorAll('.filter-input').forEach(function(otherInput, idx) {
+          var filter = otherInput.value.toLowerCase();
+          if (filter && row.children[idx]) {
+            var text = row.children[idx].textContent.toLowerCase();
+            if (text.indexOf(filter) === -1) show = false;
+          }
+        });
+        row.style.display = show ? '' : 'none';
+      });
+    });
+  });
+});
+</script>
+
+{% endblock %}

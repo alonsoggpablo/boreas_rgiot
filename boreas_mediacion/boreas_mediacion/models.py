@@ -34,25 +34,32 @@ class reported_measure(models.Model):
 
 # --- External Device Monitoring ---
 class DeviceMonitoring(models.Model):
-    DEVICE_SOURCE_CHOICES = [
-        ('nanoenvi', 'NanoENVI'),
-        ('co2', 'CO2'),
-        ('routers', 'Routers'),
-        ('shellies', 'Shellies'),
-    ]
-    
-    uuid = models.CharField(max_length=255)
-    source = models.CharField(max_length=50, choices=DEVICE_SOURCE_CHOICES)
+    uuid = models.CharField(max_length=255, db_index=True)
+    external_device = models.OneToOneField(
+        'ExternalDeviceMapping',
+        to_field='external_device_id',
+        db_column='external_device_id',
+        related_name='monitoring',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL
+    )
     monitored = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ['uuid', 'source']
         ordering = ['-updated_at']
 
     def __str__(self):
-        return f"{self.source}:{self.uuid} - {'Monitored' if self.monitored else 'Ignored'}"
+        device_id = self.external_device.external_device_id if self.external_device else self.uuid
+        return f"{device_id} - {'Monitored' if self.monitored else 'Ignored'}"
+
+    @property
+    def device_type(self):
+        if self.external_device:
+            return self.external_device.metadata.get('device_type')
+        return None
 
 # --- AEMET API Integration ---
 class AemetStation(models.Model):
