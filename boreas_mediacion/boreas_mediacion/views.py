@@ -5,7 +5,8 @@ import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import JsonResponse
 from paho.mqtt.client import ssl
-from rest_framework import viewsets, permissions, generics, status, filters
+from rest_framework import viewsets, permissions, generics, status
+from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes, action
@@ -558,7 +559,7 @@ class DeviceTypeMappingViewSet(viewsets.ModelViewSet):
     queryset = DeviceTypeMapping.objects.select_related('mqtt_device_family')
     serializer_class = DeviceTypeMappingSerializer
     permission_classes = [permissions.AllowAny]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['mqtt_device_family']
     search_fields = ['external_device_type_name']
     ordering_fields = ['external_device_type_name', 'created_at']
@@ -579,7 +580,7 @@ class ExternalDeviceMappingViewSet(viewsets.ModelViewSet):
     queryset = ExternalDeviceMapping.objects.all()
     serializer_class = ExternalDeviceMappingSerializer
     permission_classes = [permissions.AllowAny]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['client_name', 'status', 'is_active']
     search_fields = ['external_device_id', 'external_alias', 'client_name']
     ordering_fields = ['external_device_id', 'client_name', 'updated_at']
