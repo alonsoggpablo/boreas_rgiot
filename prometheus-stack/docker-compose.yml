@@ -25,9 +25,8 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
     networks:
-      boreas_rgiot_default:
-        aliases:
-          - alertmanager
+      - boreas_rgiot_default
+      - boreas_net
 
   alertmanager:
     image: prom/alertmanager:latest
