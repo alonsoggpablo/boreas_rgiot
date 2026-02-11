@@ -148,10 +148,10 @@ func (w *DBWriter) UpsertReportedMeasure(topic, deviceID, payload string) error 
 	} else {
 		log.Printf("[INFO] Using family name '%s' with ID %d", familyName, familyID)
 	}
-	query := `INSERT INTO boreas_mediacion_reported_measure (
-			feed, device_id, device, measures, report_time, device_family_id_id,
-			nanoenvi_uuid, nanoenvi_name, nanoenvi_client
-		) VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8);`
-	_, err := w.db.ExecContext(ctx, query, topic, deviceID, deviceJSON, payload, familyID, nanoUUID, nanoName, nanoClient)
+	       query := `INSERT INTO boreas_mediacion_reported_measure (
+		       feed, device_id, device, measures, report_time, device_family_id_id,
+		       uuid, name, client
+	       ) VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8);`
+	       _, err := w.db.ExecContext(ctx, query, topic, deviceID, deviceJSON, payload, familyID, nanoUUID, nanoName, nanoClient)
 	return err
 }

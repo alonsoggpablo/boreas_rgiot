@@ -38,8 +38,11 @@ docker compose exec -T web python manage.py collectstatic --noinput --clear --ve
 echo "✓ Verifying static files..."
 docker compose exec -T web ls -la /app/staticfiles/ | head -20
 
-# Run migrations
-
+echo "📦 Running migrations..."
+docker compose exec web python manage.py migrate
+# Make migrations and run migrations
+echo "📦 Making migrations..."
+docker compose exec web python manage.py makemigrations --noinput
 echo "📦 Running migrations..."
 docker compose exec web python manage.py migrate
 

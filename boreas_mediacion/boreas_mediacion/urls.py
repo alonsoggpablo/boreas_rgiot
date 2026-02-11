@@ -21,6 +21,7 @@ from rest_framework import routers
 
 from . import views
 from .views import PublishView, DeviceLastReadsView, DashboardIndexView
+from .views_gadget import GadgetListView
 
 router = routers.DefaultRouter()
 router.register(r'wirelesslogic/sims', views.WirelessLogic_SIMViewSet, basename='wirelesslogic-sim')
@@ -28,8 +29,8 @@ router.register(r'wirelesslogic/usage', views.WirelessLogic_UsageViewSet, basena
 router.register(r'sigfox/devices', views.SigfoxDeviceViewSet, basename='sigfox-device')
 router.register(r'sigfox/readings', views.SigfoxReadingViewSet, basename='sigfox-reading')
 router.register(r'anomalies', views.DetectedAnomalyViewSet, basename='anomaly')
-router.register(r'device-types', views.DeviceTypeMappingViewSet, basename='device-type')
-router.register(r'external-devices', views.ExternalDeviceMappingViewSet, basename='external-device')
+    
+# ExternalDeviceMappingViewSet route removed
 
 
 urlpatterns = [
@@ -43,7 +44,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/mqtt/active-topics/', views.active_mqtt_topics, name='active_mqtt_topics'),
     path('metrics/', __import__('boreas_mediacion.metrics').metrics.metrics_view),
-    path('external-devices/', views.devices_external_list, name='external_devices'),
+    path('external-devices/', GadgetListView.as_view(), name='gadget_list'),
     path('api/publish/', PublishView.as_view(), name='publish'),
     path('api/mqtt-control/', views.mqtt_control, name='mqtt_control'),
     path('api/sigfox', views.SigfoxCallbackView.as_view(), name='sigfox'),

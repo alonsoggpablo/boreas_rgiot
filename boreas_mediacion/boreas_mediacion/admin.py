@@ -2,105 +2,34 @@ from django.contrib import admin, messages
 from django.contrib.admin import SimpleListFilter
 from .models import MQTT_device_family, MQTT_broker, MQTT_feed, sensor_command, sensor_actuacion, router_get, \
     router_parameter, reported_measure, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, \
-    DatadisCredentials, DatadisSupply, SystemConfiguration, DeviceMonitoring, DetectedAnomaly, DeviceTypeMapping, ExternalDeviceMapping
+    DatadisCredentials, DatadisSupply, SystemConfiguration, DetectedAnomaly, Gadget
+
+@admin.register(Gadget)
+class GadgetAdmin(admin.ModelAdmin):
+    list_display = ('cliente', 'emplazamiento', 'agrupacion', 'device_id', 'alias', 'tipologia', 'compra', 'venta', 'estado', 'alta')
+    search_fields = ('device_id', 'cliente', 'alias', 'tipologia')
+    readonly_fields = ('estado', 'alta')
+
+
 
 @admin.register(MQTT_device_family)
 class MQTTDeviceFamilyAdmin(admin.ModelAdmin):
     list_display = ('id', 'name')
 
-# Custom filters for DeviceMonitoring - uses local ExternalDeviceMapping table
-class DeviceNameFilter(SimpleListFilter):
-    title = 'Device Name'
-    parameter_name = 'device_name'
-
-    def lookups(self, request, model_admin):
-        """Get unique device names from ExternalDeviceMapping (external_alias if available)"""
-        names = set()
-        for alias in ExternalDeviceMapping.objects.filter(external_alias__isnull=False).values_list('external_alias', flat=True):
-            if alias:
-                names.add(alias)
-        return [(name, name) for name in sorted(names)]
-
-    def queryset(self, request, queryset):
-        if self.value():
-            # Get external_device_ids matching this alias from ExternalDeviceMapping
-            uuids = set(ExternalDeviceMapping.objects.filter(external_alias=self.value()).values_list('external_device_id', flat=True))
-            return queryset.filter(uuid__in=uuids) if uuids else queryset
-        return queryset
-
-
-class DeviceClientFilter(SimpleListFilter):
-    title = 'Device Client'
-    parameter_name = 'device_client'
-
-    def lookups(self, request, model_admin):
-        """Get unique clients from ExternalDeviceMapping"""
-        clients = set(ExternalDeviceMapping.objects.filter(client_name__isnull=False).values_list('client_name', flat=True))
-        return [(client, client) for client in sorted(clients) if client]
-
-    def queryset(self, request, queryset):
-        if self.value():
-            # Get external_device_ids matching this client from ExternalDeviceMapping
-            uuids = set(ExternalDeviceMapping.objects.filter(client_name=self.value()).values_list('external_device_id', flat=True))
-            return queryset.filter(uuid__in=uuids) if uuids else queryset
-        return queryset
+    # Removed DeviceNameFilter and DeviceClientFilter (ExternalDeviceMapping)
 
 # Register reported_measure in admin
 @admin.register(reported_measure)
 class ReportedMeasureAdmin(admin.ModelAdmin):
-    list_display = ('device_id', 'feed', 'measures', 'nanoenvi_name', 'nanoenvi_client', 'family', 'report_time')
-    list_filter = ('device_family_id', 'nanoenvi_client', 'report_time')
-    search_fields = ('device_id', 'feed', 'measures', 'report_time', 'nanoenvi_uuid', 'nanoenvi_name', 'nanoenvi_client')
+    list_display = ('device_id', 'feed', 'measures', 'name', 'client', 'family', 'report_time')
+    list_filter = ('device_family_id', 'client', 'report_time')
+    search_fields = ('device_id', 'feed', 'measures', 'report_time', 'name', 'client')
 
     def family(self, obj):
         return obj.device_family_id.name if obj.device_family_id else None
     family.admin_order_field = 'device_family_id'
     family.short_description = 'Family'
 
-# Register DeviceMonitoring in admin
-@admin.register(DeviceMonitoring)
-class DeviceMonitoringAdmin(admin.ModelAdmin):
-    list_display = ('uuid', 'device_type', 'device_name', 'device_client', 'monitored', 'updated_at')
-    list_filter = (DeviceClientFilter, DeviceNameFilter, 'monitored', 'updated_at')
-    search_fields = ('uuid',)
-    readonly_fields = ('created_at', 'updated_at')
-    date_hierarchy = 'updated_at'
-    actions = ['mark_monitored', 'mark_not_monitored']
-    # Show client and filter external_device choices by client in creation form
-    def get_fields(self, request, obj=None):
-        if obj is None:
-            return ['external_device', 'monitored']
-        return ['uuid', 'external_device', 'monitored', 'created_at', 'updated_at']
-
-    # Use default form, show all external devices
-
-    def device_type(self, obj):
-        return obj.device_type or '-'
-    device_type.short_description = 'Type'
-
-    def device_name(self, obj):
-        """Fetch name from linked ExternalDeviceMapping"""
-        if obj.external_device:
-            return obj.external_device.external_alias or obj.external_device.external_device_id
-        return obj.uuid
-    device_name.short_description = 'Name'
-
-    def device_client(self, obj):
-        """Fetch client from linked ExternalDeviceMapping"""
-        if obj.external_device and obj.external_device.client_name:
-            return obj.external_device.client_name
-        return '-'
-    device_client.short_description = 'Client'
-
-    def mark_monitored(self, request, queryset):
-        updated = queryset.update(monitored=True)
-        self.message_user(request, f"{updated} device(s) marked as monitored.")
-    mark_monitored.short_description = "Mark selected as monitored"
-
-    def mark_not_monitored(self, request, queryset):
-        updated = queryset.update(monitored=False)
-        self.message_user(request, f"{updated} device(s) marked as not monitored.")
-    mark_not_monitored.short_description = "Mark selected as not monitored"
 
 
 # ====================
@@ -391,7 +320,7 @@ class SigfoxDeviceAdmin(admin.ModelAdmin):
     class Meta:
         app_label = 'API READS'
     list_display = ('device_id', 'firmware', 'last_seen', 'last_co2', 'last_temp', 'last_hum', 'last_read_time')
-    search_fields = ('device_id',)
+    readonly_fields = ('detected_at', 'created_at')
     readonly_fields = ('created_at', 'updated_at')
     actions = ['create_test_reading', 'show_recent_readings']
 
@@ -415,35 +344,6 @@ class SigfoxDeviceAdmin(admin.ModelAdmin):
         except Exception:
             pass
         return fw, temp, hum, co2, base
-
-    def create_test_reading(self, request, queryset):
-        sample_hex = '102d0501f40f'
-        created = 0
-        now = timezone.now()
-        for device in queryset:
-            fw, temp, hum, co2, base = self._parse_payload(sample_hex)
-            payload = {'device': device.device_id, 'data': sample_hex, 'timestamp': int(now.timestamp())}
-            SigfoxReading.objects.create(
-                device=device,
-                timestamp=now,
-                firmware=fw,
-                co2=co2,
-                temp=temp,
-                hum=hum,
-                base=base,
-                raw_data=payload
-            )
-            device.firmware = fw or device.firmware
-            device.last_seen = now
-            device.last_payload = payload
-            device.last_co2 = co2
-            device.last_temp = temp
-            device.last_hum = hum
-            device.last_base = base
-            device.save(update_fields=['firmware', 'last_seen', 'last_payload', 'last_co2', 'last_temp', 'last_hum', 'last_base', 'updated_at'])
-            created += 1
-        self.message_user(request, f'Lecturas de prueba creadas para {created} dispositivo(s)', level=messages.SUCCESS)
-    create_test_reading.short_description = "⚙️ Crear lectura de prueba"
 
     def show_recent_readings(self, request, queryset):
         summaries = []
@@ -518,145 +418,15 @@ class DetectedAnomalyAdmin(admin.ModelAdmin):
     )
 
 
-# --- External Device Integration Admin ---
-
-@admin.register(DeviceTypeMapping)
-class DeviceTypeMappingAdmin(admin.ModelAdmin):
-    list_display = ('external_device_type_name', 'get_mqtt_family', 'created_at')
-    list_filter = ('created_at', 'mqtt_device_family')
-    search_fields = ('external_device_type_name',)
-    raw_id_fields = ('mqtt_device_family',)
-    readonly_fields = ('created_at',)
-    fieldsets = (
-        ('Device Type Information', {
-            'fields': ('external_device_type_name', 'mqtt_device_family')
-        }),
-        ('Audit Information', {
-            'fields': ('created_at',),
-            'classes': ('collapse',)
-        }),
-    )
+    
 
     def get_mqtt_family(self, obj):
         return obj.mqtt_device_family.name if obj.mqtt_device_family else "—"
     get_mqtt_family.short_description = 'MQTT Family'
 
 
-class DeviceTypeFilter(SimpleListFilter):
-    title = 'Device Type'
-    parameter_name = 'device_type'
-
-    def lookups(self, request, model_admin):
-        # Get unique device types from metadata
-        device_types = set()
-        for record in ExternalDeviceMapping.objects.all():
-            device_type = record.metadata.get('device_type')
-            if device_type:
-                device_types.add(device_type)
-        return [(dt, dt) for dt in sorted(device_types)]
-
-    def queryset(self, request, queryset):
-        if self.value():
-            return queryset.filter(metadata__device_type=self.value())
-        return queryset
+    # Removed DeviceTypeFilter (ExternalDeviceMapping)
 
 
-@admin.register(ExternalDeviceMapping)
-class ExternalDeviceMappingAdmin(admin.ModelAdmin):
-    list_display = (
-        'external_device_id',
-        'external_alias',
-        'client_name',
-        'group_name',
-        'device_type_display',
-        'status',
-        'is_active',
-        'updated_at'
-    )
-    list_filter = (
-        'status',
-        DeviceTypeFilter,
-        'is_active',
-        'client_name',
-        'group_name',
-        'created_at',
-        'updated_at'
-    )
-    search_fields = ('external_device_id', 'external_alias', 'client_name', 'location_name', 'group_name')
-    readonly_fields = ('created_at', 'updated_at', 'metadata_display', 'device_type_display', 'group_name_display', 'crawl_date_display')
-    date_hierarchy = 'updated_at'
-    
-    fieldsets = (
-        ('Device Identification', {
-            'fields': ('external_device_id', 'external_alias', 'internal_device_uuid')
-        }),
-        ('Organization & Location', {
-            'fields': ('client_name', 'location_name', 'group_name')
-        }),
-        ('Device Status', {
-            'fields': ('status', 'is_active'),
-            'description': 'Current status and activity state of the device'
-        }),
-        ('Device Lifecycle', {
-            'fields': ('purchase_date', 'sale_date'),
-            'description': 'Purchase and disposal dates'
-        }),
-        ('Device Metadata', {
-            'fields': ('device_type_display', 'group_name_display', 'crawl_date_display', 'metadata'),
-            'classes': ('wide',)
-        }),
-        ('Audit Information', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-
-    def device_type_display(self, obj):
-        return obj.device_type or "—"
-    device_type_display.short_description = 'Device Type (from metadata)'
-
-    def group_name_display(self, obj):
-        return obj.metadata.get('group_name', '—')
-    group_name_display.short_description = 'Group Name (from metadata)'
-
-    def crawl_date_display(self, obj):
-        return obj.crawl_date if obj.crawl_date else "—"
-    crawl_date_display.short_description = 'Crawl Date (from metadata)'
-
-    def metadata_display(self, obj):
-        import json
-        return f'<pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto;">{json.dumps(obj.metadata, indent=2, ensure_ascii=False)}</pre>'
-    metadata_display.short_description = 'Metadata (JSON)'
-    metadata_display.allow_tags = True
-
-    actions = ['activate_devices', 'deactivate_devices', 'bulk_assign_group']
-
-    def activate_devices(self, request, queryset):
-        """Bulk activate selected devices"""
-        updated = queryset.update(is_active=True)
-        self.message_user(
-            request,
-            f'✓ {updated} device(s) activated',
-            messages.SUCCESS
-        )
-    activate_devices.short_description = "✓ Activate selected devices"
-
-    def deactivate_devices(self, request, queryset):
-        """Bulk deactivate selected devices"""
-        updated = queryset.update(is_active=False)
-        self.message_user(
-            request,
-            f'⛔ {updated} device(s) deactivated',
-            messages.WARNING
-        )
-    deactivate_devices.short_description = "⛔ Deactivate selected devices"
-
-    def bulk_assign_group(self, request, queryset):
-        """Placeholder for bulk group assignment"""
-        self.message_user(
-            request,
-            'Bulk group assignment feature coming soon',
-            messages.INFO
-        )
-    bulk_assign_group.short_description = "📁 Assign group to selected devices"
+    # Removed ExternalDeviceMappingAdmin registration and methods
 

@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand, CommandError
-from boreas_mediacion.models import DeviceTypeMapping, MQTT_device_family
+from boreas_mediacion.models import MQTT_device_family
 
 
 class Command(BaseCommand):
@@ -69,21 +69,12 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS('\n📋 Available MQTT Device Families:\n'))
         for family in families:
-            device_count = family.device_type_mappings.count()
-            self.stdout.write(
-                f'  • {family.name:30} (ID: {family.id:2}, {device_count} device types linked)'
-            )
+            
         self.stdout.write('')
 
     def link_single_device_type(self, device_type, family_name, dry_run):
         """Link a single device type to a family"""
-        try:
-            device_mapping = DeviceTypeMapping.objects.get(external_device_type_name=device_type)
-        except DeviceTypeMapping.DoesNotExist:
-            self.stdout.write(
-                self.style.ERROR(f'✗ Device type "{device_type}" not found')
-            )
-            return
+        
 
         try:
             family = MQTT_device_family.objects.get(name=family_name)

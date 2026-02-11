@@ -15,7 +15,7 @@ from django.shortcuts import render
 from django.db.models import Max, F, Subquery
 from django.views.generic import ListView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from .models import MQTT_topic, DeviceTypeMapping, ExternalDeviceMapping
+from .models import MQTT_topic
 from rest_framework.decorators import api_view
 
 from rest_framework.permissions import AllowAny
@@ -35,7 +35,7 @@ from .models import reported_measure, MQTT_broker, MQTT_tx, WirelessLogic_SIM, W
 from .serializers import (reported_measureSerializer, MQTT_tx_serializer,
                           WirelessLogic_SIMSerializer, WirelessLogic_SIMListSerializer, 
                           WirelessLogic_UsageSerializer, SigfoxDeviceSerializer, SigfoxReadingSerializer,
-                          DetectedAnomalySerializer, DeviceTypeMappingSerializer, ExternalDeviceMappingSerializer)
+                          DetectedAnomalySerializer)
 from django_filters.rest_framework import DjangoFilterBackend
 from .wirelesslogic_service import WirelessLogicService
 from django.conf import settings
@@ -82,7 +82,7 @@ class DeviceLastReadsView(LoginRequiredMixin, TemplateView):
         
         # Use raw SQL with window function for better hypertable performance
         # This avoids DISTINCT ON which is slow across hypertable chunks
-        filters = ["rm.nanoenvi_client = %s"]  # Always require client filter for performance
+        filters = ["rm.client = %s"]  # Always require client filter for performance
         params = [hours, client_filter]
         
         if family_filter:
@@ -98,8 +98,8 @@ class DeviceLastReadsView(LoginRequiredMixin, TemplateView):
                     rm.id,
                     rm.device_id,
                     rm.report_time,
-                    rm.nanoenvi_name,
-                    rm.nanoenvi_client,
+                    rm.name,
+                    rm.client,
                     rm.device_family_id_id,
                     f.name as family_name,
                     ROW_NUMBER() OVER (PARTITION BY rm.device_id ORDER BY rm.report_time DESC) as rn
@@ -107,7 +107,7 @@ class DeviceLastReadsView(LoginRequiredMixin, TemplateView):
                 LEFT JOIN boreas_mediacion_mqtt_device_family f ON rm.device_family_id_id = f.id
                 WHERE rm.report_time >= NOW() - INTERVAL '%s hours'{where_clause}
             )
-            SELECT id, device_id, report_time, nanoenvi_name, nanoenvi_client, device_family_id_id, family_name
+            SELECT id, device_id, report_time, name, client, device_family_id_id, family_name
             FROM latest_per_device
             WHERE rn = 1
             ORDER BY report_time DESC
@@ -545,46 +545,13 @@ class DetectedAnomalyViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 # External Device Integration ViewSets
-class DeviceTypeMappingViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for managing device type mappings
     
-    Endpoints:
-    - GET /api/device-types/ - List all mappings
-    - POST /api/device-types/ - Create new mapping
-    - GET /api/device-types/{id}/ - Retrieve specific mapping
-    - PUT /api/device-types/{id}/ - Update mapping
-    - DELETE /api/device-types/{id}/ - Delete mapping
-    """
-    queryset = DeviceTypeMapping.objects.select_related('mqtt_device_family')
-    serializer_class = DeviceTypeMappingSerializer
-    permission_classes = [permissions.AllowAny]
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['mqtt_device_family']
     search_fields = ['external_device_type_name']
     ordering_fields = ['external_device_type_name', 'created_at']
     ordering = ['external_device_type_name']
 
 
-class ExternalDeviceMappingViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for managing external device mappings
-    
-    Endpoints:
-    - GET /api/external-devices/ - List all devices
-    - POST /api/external-devices/ - Create new device
-    - GET /api/external-devices/{id}/ - Retrieve specific device
-    - PUT /api/external-devices/{id}/ - Update device
-    - DELETE /api/external-devices/{id}/ - Delete device
-    """
-    queryset = ExternalDeviceMapping.objects.all()
-    serializer_class = ExternalDeviceMappingSerializer
-    permission_classes = [permissions.AllowAny]
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['client_name', 'status', 'is_active']
-    search_fields = ['external_device_id', 'external_alias', 'client_name']
-    ordering_fields = ['external_device_id', 'client_name', 'updated_at']
-    ordering = ['-updated_at']
+    # ExternalDeviceMappingViewSet removed
 
 
 # Moved from boreas_bot - Device views for inventory display
@@ -594,30 +561,7 @@ from django.db import connections
 import tempfile
 import openpyxl
 
-def devices_external_list(request):
-    """Display external devices from local ExternalDeviceMapping table"""
-    name_filter = request.GET.get('name', '').strip()
-    devices = ExternalDeviceMapping.objects.all()
-    
-    if name_filter:
-        devices = devices.filter(external_alias__icontains=name_filter) | \
-                  devices.filter(external_device_id__icontains=name_filter) | \
-                  devices.filter(client_name__icontains=name_filter)
-    
-    # Get all relevant fields, excluding auto-generated timestamps and empty internal UUID
-    device_fields = [f.name for f in ExternalDeviceMapping._meta.fields 
-                     if f.name not in ['id', 'created_at', 'updated_at', 'internal_device_uuid']]
-    
-    # Order by device ID
-    devices = devices.order_by('external_device_id')
-    
-    return render(request, 'boreas_mediacion/devices_external_list.html', {
-        'devices': devices,  # Display all, paginate in template if needed
-        'total_count': ExternalDeviceMapping.objects.count(),
-        'filtered_count': devices.count(),
-        'device_fields': device_fields,
-        'name_filter': name_filter,
-    })
+    # devices_external_list removed (ExternalDeviceMapping)
 
 
 def list_devices_tables(request):

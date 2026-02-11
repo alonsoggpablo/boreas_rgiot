@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 
 from django.core.management.base import BaseCommand
-from boreas_mediacion.models import ExternalDeviceMapping
+from boreas_mediacion.models import Gadget
 
 
 class Command(BaseCommand):
@@ -22,24 +22,23 @@ class Command(BaseCommand):
 
         device_map = {}
 
-        # Export from local ExternalDeviceMapping table
-        for device in ExternalDeviceMapping.objects.all():
-            device_type = device.metadata.get('device_type', 'unknown')
-            
-            # Map device_type to source
+        # Export from Gadget table
+        for gadget in Gadget.objects.all():
+            # Guess source from tipologia or alias
+            tipologia = (gadget.tipologia or '').lower()
+            alias = (gadget.alias or '').lower()
             source = 'unknown'
-            if 'nanoenvi' in device_type.lower():
+            if 'nanoenvi' in tipologia or 'nanoenvi' in alias:
                 source = 'nanoenvi'
-            elif 'co2' in device_type.lower():
+            elif 'co2' in tipologia or 'co2' in alias:
                 source = 'co2'
-            elif 'router' in device_type.lower():
+            elif 'router' in tipologia or 'router' in alias:
                 source = 'routers'
-            elif 'shelly' in device_type.lower():
+            elif 'shelly' in tipologia or 'shelly' in alias:
                 source = 'shellies'
-            
-            device_map[str(device.external_device_id)] = {
-                "name": device.external_alias,
-                "client": device.client_name,
+            device_map[str(gadget.device_id or gadget.id)] = {
+                "name": gadget.alias or '',
+                "client": gadget.cliente or '',
                 "source": source,
             }
 

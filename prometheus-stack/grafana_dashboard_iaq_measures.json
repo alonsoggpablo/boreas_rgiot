@@ -15,11 +15,10 @@
       }
     ]
   },
-  "database": "boreas_db",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
+  "id": 2,
   "links": [],
   "panels": [
     {
@@ -103,7 +102,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.3.2",
+      "pluginVersion": "12.3.1+security-01",
       "targets": [
         {
           "dataset": "boreas_db",
@@ -114,12 +113,17 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\r\n  rm.report_time AS time,\r\n  (m->>'n') AS metric,\r\n  (m->>'v')::double precision AS value\r\nFROM boreas_mediacion_reported_measure rm\r\nCROSS JOIN LATERAL jsonb_array_elements(rm.measures->'measures') AS m\r\nWHERE rm.feed = 'IAQ_Measures'\r\n  AND rm.nanoenvi_name ~ '^(${device_name:regex})$'\r\n  AND (m->>'n') ~ '^(${IAQ_Measures:regex})$'\r\n  AND $__timeFilter(rm.report_time)\r\nORDER BY rm.report_time, (m->>'n');",
+          "rawSql": "SELECT\r\n  rm.report_time AS time,\r\n  (m->>'n') AS metric,\r\n  (m->>'v')::double precision AS value,\r\n  rm.device_id\r\nFROM boreas_mediacion_reported_measure rm\r\nCROSS JOIN LATERAL jsonb_array_elements(rm.measures->'measures') AS m\r\nWHERE rm.feed = 'IAQ_Measures'\r\n  AND rm.device_id ~ '^(${device_id:regex})$'\r\n  AND (m->>'n') ~ '^(${IAQ_Measures:regex})$'\r\n  AND $__timeFilter(rm.report_time)\r\nORDER BY rm.report_time, (m->>'n');",
           "refId": "A",
           "sql": {
             "columns": [
               {
-                "parameters": [],
+                "parameters": [
+                  {
+                    "name": "measures",
+                    "type": "functionParameter"
+                  }
+                ],
                 "type": "function"
               }
             ],
@@ -132,7 +136,8 @@
               }
             ],
             "limit": 50
-          }
+          },
+          "table": "boreas_mediacion_reported_measure"
         }
       ],
       "title": "New panel",
@@ -146,10 +151,14 @@
   "templating": {
     "list": [
       {
+        "allValue": "pm1|pm2.5|pm4|pm10|voc|nox|no2|co2",
         "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
+          "text": [
+            "co2"
+          ],
+          "value": [
+            "co2"
+          ]
         },
         "datasource": {
           "type": "grafana-postgresql-datasource",
@@ -158,7 +167,6 @@
         "definition": "SELECT 'pm1' AS metric_name UNION ALL\nSELECT 'pm2.5' UNION ALL\nSELECT 'pm4' UNION ALL\nSELECT 'pm10' UNION ALL\nSELECT 'voc' UNION ALL\nSELECT 'nox' UNION ALL\nSELECT 'no2' UNION ALL\nSELECT 'co2'\nORDER BY metric_name;",
         "description": "IAQ_Measures",
         "includeAll": true,
-        "allValue": "pm1|pm2.5|pm4|pm10|voc|nox|no2|co2",
         "label": "IAQ_Measures",
         "multi": true,
         "name": "IAQ_Measures",
@@ -167,49 +175,29 @@
         "refresh": 1,
         "regex": "",
         "sort": 1,
-        "tagValuesQuery": "",
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
-      },
-      {
-        "current": {
-          "text": "All",
-          "value": "$__all"
-        },
-        "datasource": {
-          "type": "grafana-postgresql-datasource",
-          "uid": "boreas_postgres"
-        },
-        "definition": "SELECT DISTINCT nanoenvi_client\nFROM boreas_mediacion_reported_measure\nWHERE nanoenvi_client IS NOT NULL AND nanoenvi_client != ''\nORDER BY nanoenvi_client",
-        "includeAll": true,
-        "allValue": ".*",
-        "label": "client",
-        "multi": true,
-        "name": "client",
-        "options": [],
-        "query": "SELECT DISTINCT nanoenvi_client\nFROM boreas_mediacion_reported_measure\nWHERE nanoenvi_client IS NOT NULL AND nanoenvi_client != ''\nORDER BY nanoenvi_client",
-        "refresh": 1,
-        "regex": "",
         "type": "query"
       },
       {
+        "allValue": ".*",
         "current": {
-          "text": "All",
-          "value": "$__all"
+          "text": [
+            "01bd0149-9ab4-4956-8502-44b7080dfa16"
+          ],
+          "value": [
+            "01bd0149-9ab4-4956-8502-44b7080dfa16"
+          ]
         },
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "boreas_postgres"
         },
-        "definition": "SELECT DISTINCT nanoenvi_name\nFROM boreas_mediacion_reported_measure\nWHERE nanoenvi_name IS NOT NULL AND nanoenvi_name != ''\n  AND nanoenvi_client ~ '^(${client:regex})$'\nORDER BY nanoenvi_name",
+        "definition": "SELECT DISTINCT device_id\nFROM boreas_mediacion_reported_measure\nWHERE device_id IS NOT NULL AND device_id!= ''\nand feed='IAQ_Measures'\nORDER BY device_id",
         "includeAll": true,
-        "allValue": ".*",
-        "label": "device_name",
+        "label": "device_id",
         "multi": true,
-        "name": "device_name",
+        "name": "device_id",
         "options": [],
-        "query": "SELECT DISTINCT nanoenvi_name\nFROM boreas_mediacion_reported_measure\nWHERE nanoenvi_name IS NOT NULL AND nanoenvi_name != ''\n  AND nanoenvi_client ~ '^(${client:regex})$'\nORDER BY nanoenvi_name",
+        "query": "SELECT DISTINCT device_id\nFROM boreas_mediacion_reported_measure\nWHERE device_id IS NOT NULL AND device_id!= ''\nand feed='IAQ_Measures'\nORDER BY device_id",
         "refresh": 1,
         "regex": "",
         "type": "query"
@@ -217,12 +205,12 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-2d",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "browser",
   "title": "IAQ_Measures",
   "uid": "iaq_measures",
-  "version": 4
+  "version": 9
 }

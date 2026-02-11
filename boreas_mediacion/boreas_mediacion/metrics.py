@@ -1,6 +1,6 @@
 from prometheus_client import Counter, Histogram, Gauge, generate_latest
 from prometheus_client import CollectorRegistry
-from .models import MQTT_device_family, MQTT_topic, TopicMessageTimeout, SigfoxDevice, SigfoxReading, WirelessLogic_SIM, DatadisSupply, DeviceMonitoring, DeviceTypeMapping, AemetStation
+from .models import MQTT_device_family, MQTT_topic, TopicMessageTimeout, SigfoxDevice, SigfoxReading, WirelessLogic_SIM, DatadisSupply, AemetStation
 from django.utils import timezone
 from django.http import HttpResponse
 
@@ -60,20 +60,11 @@ def metrics_view(request):
             # Check if this topic's devices are being monitored
             # Extract family name from topic (first segment) and check if any devices in that family are monitored
             family_name = topic.topic.split('/')[0] if '/' in topic.topic else topic.topic
-            device_types = list(
-                DeviceTypeMapping.objects.filter(
-                    mqtt_device_family__name__iexact=family_name
-                ).values_list('external_device_type_name', flat=True)
-            )
-
-            monitored_count = 0
-            if device_types:
-                monitored_count = DeviceMonitoring.objects.filter(
-                    external_device__metadata__device_type__in=device_types,
-                    monitored=True
-                ).count()
             
-            if monitored_count > 0:  # Only alert if there are monitored devices in this family
+            monitored_count = DeviceMonitoring.objects.filter(
+                monitored=True
+            ).count()
+            if monitored_count > 0:  # Only alert if there are monitored devices
                 if not last_time or (timezone.now() - last_time).total_seconds() > timeout_minutes * 60:
                     MQTT_TOPIC_MONITORED_TIMEOUT.labels(topic=topic.topic).set(1)
                 else:

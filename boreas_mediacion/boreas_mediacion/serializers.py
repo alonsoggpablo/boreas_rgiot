@@ -1,4 +1,4 @@
-from .models import reported_measure, MQTT_tx, sensor_command, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, DetectedAnomaly, DeviceTypeMapping, ExternalDeviceMapping
+from .models import reported_measure, MQTT_tx, sensor_command, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, DetectedAnomaly
 from rest_framework import serializers
 
 
@@ -99,46 +99,4 @@ class SigfoxDeviceSerializer(serializers.ModelSerializer):
 
 
 # External Device Integration Serializers
-class DeviceTypeMappingSerializer(serializers.ModelSerializer):
-    mqtt_family_name = serializers.CharField(
-        source='mqtt_device_family.name',
-        read_only=True
-    )
-
-    class Meta:
-        model = DeviceTypeMapping
-        fields = (
-            'id',
-            'external_device_type_name',
-            'mqtt_device_family',
-            'mqtt_family_name',
-            'created_at'
-        )
-        read_only_fields = ('created_at',)
-
-
-class ExternalDeviceMappingSerializer(serializers.ModelSerializer):
-    device_type = serializers.CharField(read_only=True)
-    crawl_date = serializers.CharField(read_only=True)
-
-    class Meta:
-        model = ExternalDeviceMapping
-        fields = (
-            'id',
-            'external_device_id',
-            'external_alias',
-            'internal_device_uuid',
-            'client_name',
-            'location_name',
-            'group_name',
-            'purchase_date',
-            'sale_date',
-            'status',
-            'is_active',
-            'device_type',
-            'metadata',
-            'crawl_date',
-            'created_at',
-            'updated_at'
-        )
-        read_only_fields = ('created_at', 'updated_at')
+    
