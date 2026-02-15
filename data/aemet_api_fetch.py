@@ -23,7 +23,7 @@ def fetch_aemet_data(**context):
     error_count = 0
     errors = []
 
-    for station in AemetStation.objects.filter(active=True):
+    for station in AemetStation.objects.filter(station_id="1207U", active=True):
         url = BASE_URL.format(station_id=station.station_id, api_key=API_KEY)
         try:
             resp = requests.get(url, timeout=30)
@@ -93,7 +93,7 @@ dag = DAG(
     'aemet_api_fetch',
     default_args=default_args,
     description='Fetch AEMET API data for all active stations',
-    schedule_interval='@hourly',
+    schedule='0 * * * *',
     catchup=False,
     tags=['aemet', 'api', 'weather'],
 )

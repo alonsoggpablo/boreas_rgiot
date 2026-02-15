@@ -12,6 +12,20 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        """
+        Populates the 'name' and 'client' fields of reported_measure records based on matching device IDs from the Gadget table.
+
+        For each unique device_id in reported_measure, this command looks up the corresponding Gadget by device_id.
+        If a match is found, it updates all reported_measure records with that device_id, setting:
+            - 'name' to the Gadget's alias (or empty string if not set)
+            - 'client' to the Gadget's cliente (or empty string if not set)
+
+        The process can be run in dry-run mode, where no updates are made and only the intended changes are reported.
+
+        Note:
+            - The matching is performed using the device_id field in both reported_measure and Gadget.
+            - Gadget's device_id is not used as the 'name'; instead, Gadget's alias is used for 'name', and cliente for 'client'.
+        """
         dry_run = options['dry_run']
         self.stdout.write(self.style.SUCCESS('Starting population of name and client fields from Gadget table...'))
         device_ids = reported_measure.objects.values_list('device_id', flat=True).distinct()

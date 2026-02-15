@@ -1,4 +1,4 @@
-# Go MQTT Subscriber Dockerfile
+# Go MQTT Subscriber Dockerfile (TEST BUILD CONTEXT - 2026-02-12)
 FROM golang:1.21-alpine AS builder
 WORKDIR /app
 COPY . .

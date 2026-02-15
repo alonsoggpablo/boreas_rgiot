@@ -67,31 +67,34 @@ class DeviceLastReadsView(LoginRequiredMixin, TemplateView):
         from django.core.paginator import Paginator
         from django.db import connection
         context = super().get_context_data(**kwargs)
-        
+
         # Get filter parameters from request
         family_filter = self.request.GET.get('family')
         client_filter = self.request.GET.get('client')
+        feed_filter = self.request.GET.get('feed')
         page_number = self.request.GET.get('page', 1)
-        
+
         # PERFORMANCE: Default to most common client if none selected
-        if not client_filter:
-            client_filter = 'Ayuntamiento de Madrid'
-        
-        # PERFORMANCE: Use shorter time window (last 2 hours) for better hypertable performance
+        # If you want to show all devices, comment out the next two lines
+        # if not client_filter:
+        #     client_filter = 'Ayuntamiento de Madrid'
+
         hours = 2
-        
-        # Use raw SQL with window function for better hypertable performance
-        # This avoids DISTINCT ON which is slow across hypertable chunks
-        filters = ["rm.client = %s"]  # Always require client filter for performance
-        params = [hours, client_filter]
-        
+
+        filters = []
+        params = [hours]
+        if client_filter:
+            filters.append("rm.client = %s")
+            params.append(client_filter)
         if family_filter:
             filters.append("f.name = %s")
             params.append(family_filter)
-        
-        where_clause = " AND " + " AND ".join(filters)
-        
-        # Optimized query using window function - much faster on hypertables
+        if feed_filter:
+            filters.append("rm.feed = %s")
+            params.append(feed_filter)
+
+        where_clause = (" AND " + " AND ".join(filters)) if filters else ""
+
         query = f"""
             WITH latest_per_device AS (
                 SELECT 
@@ -101,51 +104,45 @@ class DeviceLastReadsView(LoginRequiredMixin, TemplateView):
                     rm.name,
                     rm.client,
                     rm.device_family_id_id,
+                    rm.feed,
                     f.name as family_name,
                     ROW_NUMBER() OVER (PARTITION BY rm.device_id ORDER BY rm.report_time DESC) as rn
                 FROM boreas_mediacion_reported_measure rm
                 LEFT JOIN boreas_mediacion_mqtt_device_family f ON rm.device_family_id_id = f.id
                 WHERE rm.report_time >= NOW() - INTERVAL '%s hours'{where_clause}
             )
-            SELECT id, device_id, report_time, name, client, device_family_id_id, family_name
+            SELECT id, device_id, report_time, name, client, device_family_id_id, feed, family_name
             FROM latest_per_device
             WHERE rn = 1
             ORDER BY report_time DESC
             LIMIT 200
         """
-        
+
         with connection.cursor() as cursor:
             cursor.execute(query, params)
             columns = [col[0] for col in cursor.description]
             results = [dict(zip(columns, row)) for row in cursor.fetchall()]
-        
+
         total_devices = len(results)
-        
-        # Get unique families and clients for filter dropdowns (cached or from recent data only)
+
+        # Get unique families, clients, and feeds for filter dropdowns
         all_families = MQTT_device_family.objects.all().values_list('name', flat=True).order_by('name')
-        
-        # Hardcoded client list for performance (avoid table scan)
-        all_clients = [
-            'Ayuntamiento de Madrid',
-            'Seresco',
-            'CCG',
-            'R&P',
-            'Metro de Madrid',
-            'Monica Paino Fuente',
-            'Dpto Energía-Uniovi',
-            'Alufonca',
-            'RG',
-            'RGIoT'
-        ]
-        
+        if family_filter:
+            all_feeds = reported_measure.objects.filter(device_family_id__name=family_filter).values_list('feed', flat=True).distinct().order_by('feed')
+        else:
+            all_feeds = reported_measure.objects.values_list('feed', flat=True).distinct().order_by('feed')
+        all_clients = reported_measure.objects.values_list('client', flat=True).distinct().order_by('client')
+
         context['device_reads'] = results
         context['total_devices'] = total_devices
         context['families'] = all_families
+        context['feeds'] = all_feeds
         context['clients'] = all_clients
         context['selected_family'] = family_filter
+        context['selected_feed'] = feed_filter
         context['selected_client'] = client_filter
         context['time_window'] = f"Last {hours} hours"
-        
+
         return context
 
 

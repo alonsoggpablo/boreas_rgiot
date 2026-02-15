@@ -5,6 +5,8 @@ from django.utils import timezone
 # from . import mqtt
 
 class Gadget(models.Model):
+    uuid = models.CharField(max_length=255, blank=True, null=True)
+    uuid_ip = models.CharField(max_length=255, blank=True, null=True)
     # Removed external_device_obj property and all references to ExternalDevice
     
     cliente = models.CharField(max_length=255, blank=True, null=True)

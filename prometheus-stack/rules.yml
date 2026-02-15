@@ -72,3 +72,32 @@ groups:
     annotations:
       summary: "Timeout for AEMET station"
       description: "No data received for AEMET station {{ $labels.station_id }} in the last 2 hours."
+
+
+# Docker/cAdvisor Alerts
+  - alert: DockerContainerStopped
+    expr: count by (container_label_com_docker_swarm_service_name, container) (container_last_seen{container_label_com_docker_swarm_service_name!="", container_state!="running"}) > 0
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Docker container stopped"
+      description: "Container {{ $labels.container }} is not running."
+
+  - alert: DockerUnusedContainers
+    expr: count by (container) (container_last_seen{container_state="exited"}) > 0
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Unused Docker containers detected"
+      description: "There are exited containers that may be cleaned up."
+
+  - alert: DockerDiskUsageHigh
+    expr: sum(container_fs_usage_bytes) by (instance) / sum(container_fs_limit_bytes) by (instance) > 0.8
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Docker disk usage high"
+      description: "Docker disk usage is above 80% on instance {{ $labels.instance }}."

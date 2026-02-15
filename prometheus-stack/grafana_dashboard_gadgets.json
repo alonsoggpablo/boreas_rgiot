@@ -15,11 +15,10 @@
       }
     ]
   },
-  "database": "boreas_db",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
+  "id": 3,
   "links": [],
   "panels": [
     {
@@ -28,8 +27,8 @@
         "uid": "boreas_postgres"
       },
       "fieldConfig": {
-        "defaults": {
-          "color": {
+         "definition": "SELECT DISTINCT key AS metric FROM (SELECT jsonb_object_keys(measures) AS key FROM boreas_mediacion_reported_measure WHERE feed LIKE 'gadget%') t ORDER BY metric",
+         "query": "SELECT DISTINCT key AS metric FROM (SELECT jsonb_object_keys(measures) AS key FROM boreas_mediacion_reported_measure WHERE feed LIKE 'gadget%') t ORDER BY metric",
             "mode": "palette-classic"
           },
           "custom": {
@@ -103,7 +102,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.3.2",
+      "pluginVersion": "12.3.1+security-01",
       "targets": [
         {
           "dataset": "boreas_db",
@@ -114,7 +113,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\r\n  rm.report_time AS time,\r\n  (m->>'n') AS metric,\r\n  (m->>'v')::double precision AS value\r\nFROM boreas_mediacion_reported_measure rm\r\nCROSS JOIN LATERAL jsonb_array_elements(rm.measures->'measures') AS m\r\nWHERE rm.feed = 'IAQ_Measures'\r\n  AND rm.name ~ '^(${device_name:regex})$'\r\n  AND (m->>'n') ~ '^(${IAQ_Measures:regex})$'\r\n  AND $__timeFilter(rm.report_time)\r\nORDER BY rm.report_time, (m->>'n');",
+          "rawSql": "SELECT\n  (gadget->>'timestamp')::bigint AS time,\n  key AS metric,\n  value::double precision AS value,\n  gadget->>'uuid' AS uuid,\n  gadget->>'type' AS type\nFROM (\n  SELECT\n    gadget,\n    jsonb_each_text(data) AS kv\n  FROM boreas_mediacion_gadget_measures\n  WHERE gadget->>'type' IS NOT NULL\n    AND gadget->>'uuid' IS NOT NULL\n    AND $__timeFilter((gadget->>'timestamp')::bigint)\n) t,\nLATERAL (SELECT kv.key, kv.value) AS kv\nORDER BY time, metric;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -135,7 +134,7 @@
           }
         }
       ],
-      "title": "New panel",
+      "title": "Gadget Measures",
       "type": "timeseries"
     }
   ],
@@ -146,54 +145,25 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
-        },
+        "current": { "text": "All", "value": "$__all" },
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "boreas_postgres"
         },
-        "definition": "SELECT 'pm1' AS metric_name UNION ALL\nSELECT 'pm2.5' UNION ALL\nSELECT 'pm4' UNION ALL\nSELECT 'pm10' UNION ALL\nSELECT 'voc' UNION ALL\nSELECT 'nox' UNION ALL\nSELECT 'no2' UNION ALL\nSELECT 'co2'\nORDER BY metric_name;",
-        "description": "IAQ_Measures",
+        "definition": "SELECT DISTINCT key AS metric FROM (SELECT jsonb_object_keys(data) AS key FROM boreas_mediacion_gadget_measures) t ORDER BY metric",
         "includeAll": true,
-        "allValue": "pm1|pm2.5|pm4|pm10|voc|nox|no2|co2",
-        "label": "IAQ_Measures",
+        "allValue": "co|co2|hum|pm1|pm4|prb|tci|voc|iaqi|pm10|pm25|temp|eiaqi",
+        "label": "metric",
         "multi": true,
-        "name": "IAQ_Measures",
+        "name": "metric",
         "options": [],
-        "query": "SELECT 'pm1' AS metric_name UNION ALL\nSELECT 'pm2.5' UNION ALL\nSELECT 'pm4' UNION ALL\nSELECT 'pm10' UNION ALL\nSELECT 'voc' UNION ALL\nSELECT 'nox' UNION ALL\nSELECT 'no2' UNION ALL\nSELECT 'co2'\nORDER BY metric_name;",
-        "refresh": 1,
-        "regex": "",
-        "sort": 1,
-        "tagValuesQuery": "",
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
-      },
-      {
-        "current": {
-          "text": "All",
-          "value": "$__all"
-        },
-        "datasource": {
-          "type": "grafana-postgresql-datasource",
-          "uid": "boreas_postgres"
-        },
-        "definition": "SELECT DISTINCT client\nFROM boreas_mediacion_reported_measure\nWHERE client IS NOT NULL AND client != ''\n  AND feed = 'IAQ_Measures'\nORDER BY client",
-        "includeAll": true,
-        "allValue": ".*",
-        "label": "client",
-        "multi": true,
-        "name": "client",
-        "options": [],
-        "query": "SELECT DISTINCT client\nFROM boreas_mediacion_reported_measure\nWHERE client IS NOT NULL AND client != ''\n  AND feed = 'IAQ_Measures'\nORDER BY client",
+        "query": "SELECT DISTINCT key AS metric FROM (SELECT jsonb_object_keys(data) AS key FROM boreas_mediacion_gadget_measures) t ORDER BY metric",
         "refresh": 1,
         "regex": "",
         "type": "query"
       },
       {
+        "allValue": ".*",
         "current": {
           "text": "All",
           "value": "$__all"
@@ -202,14 +172,34 @@
           "type": "grafana-postgresql-datasource",
           "uid": "boreas_postgres"
         },
-        "definition": "SELECT DISTINCT name\nFROM boreas_mediacion_reported_measure\nWHERE name IS NOT NULL AND name != ''\n  AND client ~ '^(${client:regex})$'\n  AND feed = 'IAQ_Measures'\nORDER BY name",
+        "definition": "SELECT DISTINCT client FROM boreas_mediacion_reported_measure WHERE client IS NOT NULL AND client != '' ORDER BY client",
         "includeAll": true,
+        "label": "client",
+        "multi": true,
+        "name": "client",
+        "options": [],
+        "query": "SELECT DISTINCT client FROM boreas_mediacion_reported_measure WHERE client IS NOT NULL AND client != '' ORDER BY client",
+        "refresh": 1,
+        "regex": "",
+        "type": "query"
+      },
+      {
         "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "boreas_postgres"
+        },
+        "definition": "SELECT DISTINCT name FROM boreas_mediacion_reported_measure WHERE name IS NOT NULL AND name != '' AND client ~ '^(${client:regex})$' ORDER BY name",
+        "includeAll": true,
         "label": "device_name",
         "multi": true,
         "name": "device_name",
         "options": [],
-        "query": "SELECT DISTINCT name\nFROM boreas_mediacion_reported_measure\nWHERE name IS NOT NULL AND name != ''\n  AND client ~ '^(${client:regex})$'\n  AND feed = 'IAQ_Measures'\nORDER BY name",
+        "query": "SELECT DISTINCT name FROM boreas_mediacion_reported_measure WHERE name IS NOT NULL AND name != '' AND client ~ '^(${client:regex})$' ORDER BY name",
         "refresh": 1,
         "regex": "",
         "type": "query"
@@ -222,7 +212,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "IAQ_Measures",
-  "uid": "iaq_measures",
+  "title": "Gadget Measures",
+  "uid": "gadget_measures",
   "version": 4
 }

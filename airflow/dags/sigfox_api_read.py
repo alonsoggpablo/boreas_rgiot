@@ -76,7 +76,6 @@ def read_sigfox_api():
         print(f"SIGFOX API: Error saving to DB: {e}")
     print("SIGFOX API read and save completed.")
 
-
 default_args = {
     'owner': 'boreas',
     'retries': 1,

@@ -32,6 +32,9 @@ func fetchActiveTopics(apiURL string) ([]Topic, error) {
 }
 
 func main() {
+		log.Printf("[DEBUG][STARTUP] main() has started and this is a fresh build.")
+	log.SetFlags(0)
+	log.SetOutput(os.Stdout)
 
 	// (opts will be defined after all env vars are set)
 
@@ -63,10 +66,11 @@ func main() {
 	if deviceMapPath == "" {
 		deviceMapPath = "/app/media/external_devices_map.json"
 	}
-	dbw, err := NewDBWriter(dbConnStr, deviceMapPath)
-	if err != nil {
-		log.Fatalf("Failed to connect to DB: %v", err)
-	}
+	       dbw, err := NewDBWriter(dbConnStr, deviceMapPath)
+	       if err != nil {
+		       log.Fatalf("Failed to connect to DB: %v", err)
+	       }
+		fmt.Printf("[DEBUG][MAIN] DBWriter created, deviceMapPath: '%s'\n", deviceMapPath)
 
 	// MQTT client setup
 	opts := mqtt.NewClientOptions().AddBroker(mqttBroker)
@@ -101,7 +105,7 @@ func main() {
 		topic := t.Topic
 		qos := byte(t.QoS)
 		token := client.Subscribe(topic, qos, func(client mqtt.Client, msg mqtt.Message) {
-			fmt.Printf("Received on %s: %s\n", msg.Topic(), string(msg.Payload()))
+			   log.Printf("[DEBUG][RECV] Raw MQTT message received. Topic: '%s', Payload: '%s'", msg.Topic(), string(msg.Payload()))
 			// Try to extract deviceID from payload (idema for AEMET), else from topic
 			deviceID := "unknown"
 			payload := string(msg.Payload())
@@ -135,7 +139,8 @@ func main() {
 					}
 				}
 			}
-			err := dbw.UpsertReportedMeasure(msg.Topic(), deviceID, payload)
+			   log.Printf("[DEBUG][MSG] Topic: '%s', deviceID: '%s' (hex: %x)", msg.Topic(), deviceID, deviceID)
+			   err := dbw.UpsertReportedMeasure(msg.Topic(), deviceID, payload)
 			if err != nil {
 				log.Printf("DB upsert error (reported_measure) for %s: %v", msg.Topic(), err)
 			}

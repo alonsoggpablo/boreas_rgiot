@@ -22,9 +22,11 @@ class Command(BaseCommand):
 
         device_map = {}
 
-        # Export from Gadget table
+        # Export from Gadget table, indexed by uuid
         for gadget in Gadget.objects.all():
-            # Guess source from tipologia or alias
+            uuid = getattr(gadget, "uuid", None)
+            if not uuid:
+                continue  # skip gadgets without uuid
             tipologia = (gadget.tipologia or '').lower()
             alias = (gadget.alias or '').lower()
             source = 'unknown'
@@ -36,7 +38,7 @@ class Command(BaseCommand):
                 source = 'routers'
             elif 'shelly' in tipologia or 'shelly' in alias:
                 source = 'shellies'
-            device_map[str(gadget.device_id or gadget.id)] = {
+            device_map[uuid] = {
                 "name": gadget.alias or '',
                 "client": gadget.cliente or '',
                 "source": source,

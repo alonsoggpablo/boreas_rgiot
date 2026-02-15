@@ -1,9 +1,11 @@
 package main
 
+
 import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -85,11 +87,14 @@ func (w *DBWriter) PeriodicFamilyCacheRefresh() {
 }
 
 func (w *DBWriter) RefreshDeviceMap() error {
+	fmt.Printf("[DEBUG][DEVICEMAP] Entering RefreshDeviceMap, path: '%s'\n", w.devicePath)
 	if w.devicePath == "" {
+		fmt.Printf("[DEBUG][DEVICEMAP] devicePath is empty, skipping load\n")
 		return nil
 	}
 	data, err := os.ReadFile(w.devicePath)
 	if err != nil {
+		fmt.Printf("[DEBUG][DEVICEMAP] Error reading file '%s': %v\n", w.devicePath, err)
 		return err
 	}
 	var payload deviceMapPayload
@@ -101,6 +106,11 @@ func (w *DBWriter) RefreshDeviceMap() error {
 	}
 	w.deviceMu.Lock()
 	w.deviceMap = payload.Devices
+	// Debug log: print all device IDs loaded from the map
+	log.Printf("[DEBUG][DEVICEMAP] Loaded %d device IDs from %s", len(payload.Devices), w.devicePath)
+	for k := range payload.Devices {
+		log.Printf("[DEBUG][DEVICEMAP] DeviceID key: '%s' (hex: %x)", k, k)
+	}
 	w.deviceMu.Unlock()
 	return nil
 }
@@ -117,9 +127,18 @@ func (w *DBWriter) PeriodicDeviceMapRefresh() {
 
 func (w *DBWriter) lookupDeviceInfo(deviceID string) (DeviceInfo, bool) {
 	w.deviceMu.RLock()
-	info, ok := w.deviceMap[deviceID]
-	w.deviceMu.RUnlock()
-	return info, ok
+	defer w.deviceMu.RUnlock()
+		       log.Printf("[DEBUG][LOOKUP] Looking up deviceID: '%s' (len: %d, hex: % x)", deviceID, len(deviceID), deviceID)
+		       for k := range w.deviceMap {
+			       log.Printf("[DEBUG][LOOKUP] Map key: '%s' (len: %d, hex: % x)", k, len(k), k)
+		       }
+		       info, ok := w.deviceMap[deviceID]
+		       if ok {
+			       log.Printf("[DEBUG][LOOKUP] SUCCESS: deviceID '%s' found in map", deviceID)
+		       } else {
+			       log.Printf("[DEBUG][LOOKUP] FAIL: deviceID '%s' NOT found in map", deviceID)
+		       }
+		       return info, ok
 }
 
 // Upsert last message for topic/device_id in reported_measure
@@ -148,10 +167,19 @@ func (w *DBWriter) UpsertReportedMeasure(topic, deviceID, payload string) error 
 	} else {
 		log.Printf("[INFO] Using family name '%s' with ID %d", familyName, familyID)
 	}
-	       query := `INSERT INTO boreas_mediacion_reported_measure (
-		       feed, device_id, device, measures, report_time, device_family_id_id,
-		       uuid, name, client
-	       ) VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8);`
-	       _, err := w.db.ExecContext(ctx, query, topic, deviceID, deviceJSON, payload, familyID, nanoUUID, nanoName, nanoClient)
-	return err
+		       // Ensure payload is valid JSON. If not, wrap as JSON string
+			       validJSON := payload
+			       var js json.RawMessage
+			       if err := json.Unmarshal([]byte(payload), &js); err != nil {
+				       // Not valid JSON, wrap as {"value": <payload>}
+				       obj := map[string]string{"value": payload}
+				       b, _ := json.Marshal(obj)
+				       validJSON = string(b)
+			       }
+		       query := `INSERT INTO boreas_mediacion_reported_measure (
+			       feed, device_id, device, measures, report_time, device_family_id_id,
+			       uuid, name, client
+		       ) VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8);`
+		       _, err := w.db.ExecContext(ctx, query, topic, deviceID, deviceJSON, validJSON, familyID, nanoUUID, nanoName, nanoClient)
+		       return err
 }

@@ -10,6 +10,13 @@ services:
       - TOPIC_API_URL=http://web:8000/api/mqtt/active-topics/
       - PG_CONN=postgres://boreas_user:boreas_password@db:5432/boreas_db?sslmode=disable
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    tmpfs:
+      - /tmp:size=100m
     networks:
       - boreas_net
   prometheus:
@@ -24,6 +31,26 @@ services:
       - ./rules.yml:/etc/prometheus/rules.yml
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=1d"
+      - "--storage.tsdb.retention.size=2GB"
+    networks:
+      - boreas_rgiot_default
+      - boreas_net
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+      - "8081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    restart: always
     networks:
       - boreas_rgiot_default
       - boreas_net
@@ -54,6 +81,8 @@ services:
       - ./grafana_postgres_datasource.yaml:/etc/grafana/provisioning/datasources/postgres.yaml
       - ./grafana_dashboard_provision.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
       - ./grafana_dashboard_iaq_measures.json:/etc/grafana/provisioning/dashboards/grafana_dashboard_iaq_measures.json
+      - ./grafana_dashboard_gadgets.json:/etc/grafana/provisioning/dashboards/grafana_dashboard_gadgets.json
+      - ./grafana_dashboard_docker_cadvisor.json:/etc/grafana/provisioning/dashboards/grafana_dashboard_docker_cadvisor.json
     networks:
       - boreas_rgiot_default
       - boreas_net

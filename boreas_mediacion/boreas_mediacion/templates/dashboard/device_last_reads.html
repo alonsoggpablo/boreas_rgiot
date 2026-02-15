@@ -137,10 +137,36 @@
                             <option value="{{ family }}" {% if selected_family == family %}selected{% endif %}>{{ family }}</option>
                         {% endfor %}
                     </select>
-                </div>
-                
-                <div class="filter-group">
-                    <label for="client">Client:</label>
+                    <label for="feed" style="margin-left:10px;">Feed:</label>
+                    <select name="feed" id="feed">
+                        <option value="">All</option>
+                        {% for feed in feeds %}
+                            <option value="{{ feed }}" {% if selected_feed == feed %}selected{% endif %}>{{ feed }}</option>
+                        {% endfor %}
+                    </select>
+                        <script>
+                        // Restrict feed options to selected family
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const familySelect = document.getElementById('family');
+                            const feedSelect = document.getElementById('feed');
+                            const originalFeeds = Array.from(feedSelect.options).map(opt => ({value: opt.value, text: opt.text}));
+
+                            familySelect.addEventListener('change', function() {
+                                const selectedFamily = familySelect.value;
+                                fetch(window.location.pathname + '?family=' + encodeURIComponent(selectedFamily))
+                                    .then(response => response.text())
+                                    .then(html => {
+                                        const parser = new DOMParser();
+                                        const doc = parser.parseFromString(html, 'text/html');
+                                        const newFeedSelect = doc.getElementById('feed');
+                                        if (newFeedSelect) {
+                                            feedSelect.innerHTML = newFeedSelect.innerHTML;
+                                        }
+                                    });
+                            });
+                        });
+                        </script>
+                    <label for="client" style="margin-left:10px;">Client:</label>
                     <select name="client" id="client">
                         <option value="">All</option>
                         {% for client in clients %}
@@ -148,7 +174,6 @@
                         {% endfor %}
                     </select>
                 </div>
-                
                 <div class="filter-group">
                     <input type="submit" value="Filter">
                     <a href="?"><input type="button" value="Reset" class="reset-btn"></a>
@@ -162,6 +187,7 @@
                 <tr>
                     <th>Device ID</th>
                     <th>Family</th>
+                    <th>Feed</th>
                     <th>Name</th>
                     <th>Client</th>
                     <th>Last Report</th>
@@ -172,22 +198,29 @@
                 <tr data-timestamp="{{ read.report_time|date:'c' }}">
                     <td><code>{{ read.device_id }}</code></td>
                     <td>
-                        {% if read.device_family_id %}
-                            {{ read.device_family_id.name }}
+                        {% if read.family_name %}
+                            {{ read.family_name }}
                         {% else %}
                             <span class="null-value">-</span>
                         {% endif %}
                     </td>
                     <td>
-                        {% if read.nanoenvi_name %}
-                            {{ read.nanoenvi_name }}
+                        {% if read.feed %}
+                            {{ read.feed }}
                         {% else %}
                             <span class="null-value">-</span>
                         {% endif %}
                     </td>
                     <td>
-                        {% if read.nanoenvi_client %}
-                            {{ read.nanoenvi_client }}
+                        {% if read.name %}
+                            {{ read.name }}
+                        {% else %}
+                            <span class="null-value">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if read.client %}
+                            {{ read.client }}
                         {% else %}
                             <span class="null-value">-</span>
                         {% endif %}
@@ -265,9 +298,17 @@
         }
 
         function refreshDashboard() {
-            const currentUrl = window.location.href;
-            
-            fetch(currentUrl, {
+            // Build query string from current dropdowns
+            const family = document.getElementById('family')?.value || '';
+            const feed = document.getElementById('feed')?.value || '';
+            const client = document.getElementById('client')?.value || '';
+            let queryString = '?';
+            if (family) queryString += 'family=' + encodeURIComponent(family) + '&';
+            if (feed) queryString += 'feed=' + encodeURIComponent(feed) + '&';
+            if (client) queryString += 'client=' + encodeURIComponent(client) + '&';
+            queryString = queryString.replace(/&$/, '');
+
+            fetch(window.location.pathname + queryString, {
                 method: 'GET',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
@@ -278,17 +319,12 @@
                 // Extract just the table content
                 const parser = new DOMParser();
                 const newDoc = parser.parseFromString(html, 'text/html');
-                
-                // Update the main content area
-                const newContent = newDoc.querySelector('.container');
-                const currentContent = document.querySelector('.container');
-                
-                if (newContent && currentContent) {
-                    currentContent.innerHTML = newContent.innerHTML;
-                    // Re-apply stale row highlighting after update
+                const newTable = newDoc.querySelector('table');
+                const currentTable = document.querySelector('table');
+                if (newTable && currentTable) {
+                    currentTable.innerHTML = newTable.innerHTML;
                     highlightStaleRows();
                 }
-                
                 // Update the timestamp
                 const now = new Date();
                 const timeString = now.toLocaleTimeString('es-ES');
