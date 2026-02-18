@@ -1,4 +1,10 @@
 from django.db import models
+# Dummy model for API Task Trigger in admin
+class APITaskTrigger(models.Model):
+    class Meta:
+        verbose_name = "API Task Trigger"
+        verbose_name_plural = "API Task Triggers"
+from django.db import models
 from django.utils import timezone
 # from django.db.models.signals import post_save
 # from django.dispatch import receiver

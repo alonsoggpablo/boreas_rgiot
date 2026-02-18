@@ -1,4 +1,0 @@
-# Run all API reads every hour
-0 * * * * /app/datadis_api_read >> /var/log/datadis_api_read.log 2>&1
-0 * * * * /app/sigfox_api_read >> /var/log/sigfox_api_read.log 2>&1
-0 * * * * /app/wireless_api_read >> /var/log/wireless_api_read.log 2>&1

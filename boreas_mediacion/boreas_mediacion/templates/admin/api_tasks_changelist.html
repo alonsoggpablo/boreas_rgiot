@@ -1,0 +1,11 @@
+{% extends "admin/change_list.html" %}
+{% block object-tools %}
+    <div class="object-tools">
+        <ul class="object-tools">
+            <li>
+                <a href="run-all-api-tasks/" class="addlink">Run All API Tasks Now</a>
+            </li>
+        </ul>
+    </div>
+    {{ block.super }}
+{% endblock %}

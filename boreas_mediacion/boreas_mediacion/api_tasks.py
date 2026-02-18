@@ -1,28 +1,18 @@
-"""
-Airflow DAG to read SIGFOX API every 60 minutes
-"""
-import sys
-import os
+from celery import shared_task
 import pendulum
-from airflow import DAG
-from airflow.operators.python import PythonOperator
+import os
+import sys
 
-# Add Django project to Python path
-sys.path.insert(0, '/app')
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'boreas_mediacion.settings')
-
+@shared_task
 def read_sigfox_api():
     import django
     import requests
     import json
     django.setup()
     from boreas_mediacion.models import SigfoxDevice, SigfoxReading
-    from django.utils import timezone
-    import pendulum
     # Set your credentials here
     usr = "rgiot"
     pwd = "rgiot"
-    # Example device and data (replace with real logic if needed)
     device_id = "auto_sigfox_dag"
     data_hex = "102d0501f40f"
     ts = int(pendulum.now('Europe/Madrid').timestamp())
@@ -32,16 +22,17 @@ def read_sigfox_api():
         "Authorization": "Basic cmdpb3Q6cmdpb3Q="
     }
     payload = {"device": device_id, "data": data_hex, "timestamp": ts}
+    post_status = None
+    post_response = None
+    post_error = None
+    db_error = None
     try:
         response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=10)
-        print(f"POST {url} status: {response.status_code}")
-        print(f"Response: {response.text}")
+        post_status = response.status_code
+        post_response = response.text
     except Exception as e:
-        print(f"Error posting to Sigfox API: {e}")
-
-    # Save to DB directly (in addition to API call)
+        post_error = str(e)
     try:
-        from django.utils import timezone
         ts_dt = pendulum.from_timestamp(ts, tz='Europe/Madrid')
         fw = data_hex[0:1] if data_hex else None
         temp = hum = co2 = base = None
@@ -71,31 +62,36 @@ def read_sigfox_api():
             base=base,
             raw_data=payload
         )
-        print("SIGFOX API: Data saved to DB.")
     except Exception as e:
-        print(f"SIGFOX API: Error saving to DB: {e}")
-    print("SIGFOX API read and save completed.")
+        db_error = str(e)
+    result = {
+        "post_status": post_status,
+        "post_error": post_error,
+        "db_error": db_error,
+        "post_response": post_response
+    }
+    return result
 
-default_args = {
-    'owner': 'boreas',
-    'retries': 1,
-    'retry_delay': pendulum.duration(minutes=5),
-}
+@shared_task
+def read_datadis_api():
+    import django
+    django.setup()
+    from boreas_mediacion.datadis_service import DatadisService
+    from boreas_mediacion.models import DatadisCredentials, DatadisSupply
+    creds = DatadisCredentials.objects.filter(username="B27441401", password="Jl.295469!").first()
+    if not creds:
+        return "No valid DATADIS credentials found."
+    service = DatadisService(credentials=creds)
+    token = service.authenticate()
+    created, updated = service.sync_supplies()
+    return f"Supplies sync: {created} created, {updated} updated, token: {token[:10]}..."
 
-dag = DAG(
-    'sigfox_api_read',
-    default_args=default_args,
-    description='Read SIGFOX API every 60 minutes',
-    schedule_interval='0 * * * *',  # Every 60 minutes
-    start_date=pendulum.datetime(2026, 1, 18, tz="Europe/Madrid"),
-    catchup=False,
-    tags=['sigfox', 'api', 'monitoring'],
-)
-
-read_sigfox_task = PythonOperator(
-    task_id='read_sigfox_api',
-    python_callable=read_sigfox_api,
-    dag=dag,
-)
-
-read_sigfox_task
+@shared_task
+def read_wireless_api():
+    import django
+    django.setup()
+    from boreas_mediacion.wirelesslogic_service import WirelessLogicService
+    service = WirelessLogicService()
+    created, updated = service.sync_all_sims()
+    usage_count = service.sync_sim_usage()
+    return f"WirelessLogic SIMs - created: {created}, updated: {updated}, usage records: {usage_count}"

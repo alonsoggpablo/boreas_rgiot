@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django.contrib.admin import SimpleListFilter
 from .models import MQTT_device_family, MQTT_broker, MQTT_feed, sensor_command, sensor_actuacion, router_get, \
     router_parameter, reported_measure, WirelessLogic_SIM, WirelessLogic_Usage, SigfoxDevice, SigfoxReading, \
-    DatadisCredentials, DatadisSupply, SystemConfiguration, DetectedAnomaly, Gadget
+    DatadisCredentials, DatadisSupply, SystemConfiguration, DetectedAnomaly, Gadget, APITaskTrigger
 
 @admin.register(Gadget)
 class GadgetAdmin(admin.ModelAdmin):
@@ -429,4 +429,36 @@ class DetectedAnomalyAdmin(admin.ModelAdmin):
 
 
     # Removed ExternalDeviceMappingAdmin registration and methods
+
+
+from django.contrib import admin
+from django.contrib import messages
+from django.http import HttpResponseRedirect
+from django.urls import path
+from django.utils.html import format_html
+from django.shortcuts import redirect
+
+from boreas_mediacion.api_tasks import read_sigfox_api, read_datadis_api, read_wireless_api
+
+class APITaskAdmin(admin.ModelAdmin):
+    change_list_template = "admin/api_tasks_changelist.html"
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('run-all-api-tasks/', self.admin_site.admin_view(self.run_all_api_tasks), name="run-all-api-tasks"),
+        ]
+        return custom_urls + urls
+
+    def run_all_api_tasks(self, request):
+        read_sigfox_api.delay()
+        read_datadis_api.delay()
+        read_wireless_api.delay()
+        self.message_user(request, "All API tasks triggered via Celery.", messages.SUCCESS)
+        return redirect("..")
+
+# Register a dummy model to show the button in admin
+
+
+admin.site.register(APITaskTrigger, APITaskAdmin)
 

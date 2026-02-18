@@ -1,9 +1,36 @@
-
 networks:
   boreas_net:
     external: true
 
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: boreas_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - boreas_net
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile.celery
+    container_name: boreas_celery
+    working_dir: /app
+    command: celery -A boreas_mediacion.celery worker --loglevel=info
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media:ro
+      - ./boreas_mediacion/management/commands:/app/boreas_mediacion/management/commands
+    environment:
+      - PYTHONPATH=/app/boreas_mediacion
+    env_file: .env
+    depends_on:
+      - web
+      - redis
+    networks:
+      - boreas_net
   db:
     image: timescale/timescaledb:2.13.1-pg15
     container_name: boreas_db
@@ -101,26 +128,6 @@ services:
     networks:
       - boreas_net
 
-  go_api_read:
-    build:
-      context: ./go_api_read
-    container_name: go_api_read
-    environment:
-      - PG_CONN=postgres://boreas_user:boreas_password@db:5432/boreas_db?sslmode=disable
-    volumes:
-      - ./data:/app/data
-    depends_on:
-      - db
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "50m"
-        max-file: "3"
-    tmpfs:
-      - /tmp:size=100m
-    networks:
-      - boreas_net
   go_anomaly_detector:
     build:
       context: ./go_anomaly_detector
