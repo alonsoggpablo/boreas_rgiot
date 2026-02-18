@@ -551,7 +551,6 @@ class DetectedAnomalyViewSet(viewsets.ReadOnlyModelViewSet):
     # ExternalDeviceMappingViewSet removed
 
 
-# Moved from boreas_bot - Device views for inventory display
 import os
 from django.views.decorators.csrf import csrf_exempt
 from django.db import connections

@@ -4,7 +4,7 @@ import os
 import sys
 
 @shared_task
-def read_sigfox_api():
+def read_sigfox_api(periodic_task_name=None):
     import django
     import requests
     import json
@@ -68,30 +68,37 @@ def read_sigfox_api():
         "post_status": post_status,
         "post_error": post_error,
         "db_error": db_error,
-        "post_response": post_response
+        "post_response": post_response,
+        "periodic_task_name": periodic_task_name
     }
     return result
 
 @shared_task
-def read_datadis_api():
+def read_datadis_api(periodic_task_name=None):
     import django
     django.setup()
     from boreas_mediacion.datadis_service import DatadisService
     from boreas_mediacion.models import DatadisCredentials, DatadisSupply
     creds = DatadisCredentials.objects.filter(username="B27441401", password="Jl.295469!").first()
     if not creds:
-        return "No valid DATADIS credentials found."
+        return {"result": "No valid DATADIS credentials found.", "periodic_task_name": periodic_task_name}
     service = DatadisService(credentials=creds)
     token = service.authenticate()
     created, updated = service.sync_supplies()
-    return f"Supplies sync: {created} created, {updated} updated, token: {token[:10]}..."
+    return {
+        "result": f"Supplies sync: {created} created, {updated} updated, token: {token[:10]}...",
+        "periodic_task_name": periodic_task_name
+    }
 
 @shared_task
-def read_wireless_api():
+def read_wireless_api(periodic_task_name=None):
     import django
     django.setup()
     from boreas_mediacion.wirelesslogic_service import WirelessLogicService
     service = WirelessLogicService()
     created, updated = service.sync_all_sims()
     usage_count = service.sync_sim_usage()
-    return f"WirelessLogic SIMs - created: {created}, updated: {updated}, usage records: {usage_count}"
+    return {
+        "result": f"WirelessLogic SIMs - created: {created}, updated: {updated}, usage records: {usage_count}",
+        "periodic_task_name": periodic_task_name
+    }

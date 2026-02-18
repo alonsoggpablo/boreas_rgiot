@@ -42,12 +42,10 @@ INSTALLED_APPS = [
     'rest_framework',
     'django_filters',
     'boreas_mediacion',
-    'boreas_bot',
 ]
 
 # Database routers
 DATABASE_ROUTERS = [
-    'boreas_bot.routers.BoreasBotRouter',
 ]
 
 MIDDLEWARE = [
