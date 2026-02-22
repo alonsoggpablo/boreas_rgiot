@@ -15,11 +15,10 @@
       }
     ]
   },
-  "database": "boreas_db",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
+  "id": 0,
   "links": [],
   "panels": [
     {
@@ -50,7 +49,7 @@
             },
             "insertNulls": false,
             "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
@@ -76,7 +75,7 @@
               },
               {
                 "color": "red",
-                "value": 80
+                "value": 10000
               }
             ]
           }
@@ -103,7 +102,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.3.2",
+      "pluginVersion": "12.3.3",
       "targets": [
         {
           "dataset": "boreas_db",
@@ -114,7 +113,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\r\n  rm.report_time AS time,\r\n  (m->>'n') AS metric,\r\n  (m->>'v')::double precision AS value\r\nFROM boreas_mediacion_reported_measure rm\r\nCROSS JOIN LATERAL jsonb_array_elements(rm.measures->'measures') AS m\r\nWHERE rm.feed = 'IAQ_Measures'\r\n  AND rm.name ~ '^(${device_name:regex})$'\r\n  AND (m->>'n') ~ '^(${IAQ_Measures:regex})$'\r\n  AND $__timeFilter(rm.report_time)\r\nORDER BY rm.report_time, (m->>'n');",
+          "rawSql": "SELECT\n  rm.report_time AS time,\n  '${metrics}' AS metric,\n  (rm.measures->'data'->>'${metrics}')::double precision AS value\nFROM boreas_mediacion_reported_measure rm\nWHERE rm.name ~ '^(${device_name:regex})$'\n  AND $__timeFilter(rm.report_time)\n  AND (rm.measures->'data'->>'${metrics}') IS NOT NULL\nORDER BY rm.report_time;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -135,81 +134,58 @@
           }
         }
       ],
-      "title": "New panel",
+      "title": "Shelly EM3 Power Metrics",
       "type": "timeseries"
     }
   ],
   "preload": false,
   "refresh": "10s",
   "schemaVersion": 42,
-  "tags": [],
+  "tags": [
+    "shellyem3"
+  ],
   "templating": {
     "list": [
       {
         "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
+          "text": "CONCELLO DE BOQUEIXÓN",
+          "value": "CONCELLO DE BOQUEIXÓN"
         },
-        "datasource": {
-          "type": "grafana-postgresql-datasource",
-          "uid": "boreas_postgres"
-        },
-        "definition": "SELECT 'pm1' AS metric_name UNION ALL\nSELECT 'pm2.5' UNION ALL\nSELECT 'pm4' UNION ALL\nSELECT 'pm10' UNION ALL\nSELECT 'voc' UNION ALL\nSELECT 'nox' UNION ALL\nSELECT 'no2' UNION ALL\nSELECT 'co2'\nORDER BY metric_name;",
-        "description": "IAQ_Measures",
-        "includeAll": true,
-        "allValue": "pm1|pm2.5|pm4|pm10|voc|nox|no2|co2",
-        "label": "IAQ_Measures",
-        "multi": true,
-        "name": "IAQ_Measures",
-        "options": [],
-        "query": "SELECT 'pm1' AS metric_name UNION ALL\nSELECT 'pm2.5' UNION ALL\nSELECT 'pm4' UNION ALL\nSELECT 'pm10' UNION ALL\nSELECT 'voc' UNION ALL\nSELECT 'nox' UNION ALL\nSELECT 'no2' UNION ALL\nSELECT 'co2'\nORDER BY metric_name;",
-        "refresh": 1,
-        "regex": "",
-        "sort": 1,
-        "tagValuesQuery": "",
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
-      },
-      {
-        "current": {
-          "text": "All",
-          "value": "$__all"
-        },
-        "datasource": {
-          "type": "grafana-postgresql-datasource",
-          "uid": "boreas_postgres"
-        },
-        "definition": "SELECT DISTINCT client\nFROM boreas_mediacion_reported_measure\nWHERE client IS NOT NULL AND client != ''\n  AND feed = 'IAQ_Measures'\nORDER BY client",
-        "includeAll": true,
-        "allValue": ".*",
-        "label": "client",
-        "multi": true,
+        "definition": "SELECT DISTINCT client FROM boreas_mediacion_reported_measure WHERE client IS NOT NULL AND client != ''  AND feed like 'shellies/shellyem3%'  or feed like 'gadget/shellypro3em-a0dd6ca19358%' ORDER BY client",
         "name": "client",
         "options": [],
-        "query": "SELECT DISTINCT client\nFROM boreas_mediacion_reported_measure\nWHERE client IS NOT NULL AND client != ''\n  AND feed = 'IAQ_Measures'\nORDER BY client",
+        "query": "SELECT DISTINCT client FROM boreas_mediacion_reported_measure WHERE client IS NOT NULL AND client != ''  AND feed like 'shellies/shellyem3%'  or feed like 'gadget/shellypro3em-a0dd6ca19358%' ORDER BY client",
         "refresh": 1,
         "regex": "",
         "type": "query"
       },
       {
         "current": {
-          "text": "All",
-          "value": "$__all"
+          "text": "CONSH50010",
+          "value": "CONSH50010"
         },
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "boreas_postgres"
         },
-        "definition": "SELECT DISTINCT name\nFROM boreas_mediacion_reported_measure\nWHERE name IS NOT NULL AND name != ''\n  AND client ~ '^(${client:regex})$'\n  AND feed = 'IAQ_Measures'\nORDER BY name",
-        "includeAll": true,
-        "allValue": ".*",
+        "definition": "SELECT DISTINCT name FROM boreas_mediacion_reported_measure WHERE name IS NOT NULL AND name != ''  AND client ~ '^(${client:regex})$' \nor feed like 'gadget/shellypro3em%' AND feed like 'shellies/shellyem3%' ORDER BY name",
+        "includeAll": false,
         "label": "device_name",
-        "multi": true,
         "name": "device_name",
         "options": [],
-        "query": "SELECT DISTINCT name\nFROM boreas_mediacion_reported_measure\nWHERE name IS NOT NULL AND name != ''\n  AND client ~ '^(${client:regex})$'\n  AND feed = 'IAQ_Measures'\nORDER BY name",
+        "query": "SELECT DISTINCT name FROM boreas_mediacion_reported_measure WHERE name IS NOT NULL AND name != ''  AND client ~ '^(${client:regex})$' \nor feed like 'gadget/shellypro3em%' AND feed like 'shellies/shellyem3%' ORDER BY name",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "total_returned",
+          "value": "total_returned"
+        },
+        "definition": "SELECT DISTINCT metric_name\nFROM boreas_mediacion_reported_measure rm\nCROSS JOIN LATERAL jsonb_object_keys(rm.measures->'data') AS metric_name\nWHERE feed like '%shellyem3%';",
+        "name": "metrics",
+        "options": [],
+        "query": "SELECT DISTINCT metric_name\nFROM boreas_mediacion_reported_measure rm\nCROSS JOIN LATERAL jsonb_object_keys(rm.measures->'data') AS metric_name\nWHERE feed like '%shellyem3%';",
         "refresh": 1,
         "regex": "",
         "type": "query"
@@ -222,7 +198,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "IAQ Measures",
-  "uid": "iaq_measures",
-  "version": 4
+  "title": "Shelly EM3 Power",
+  "uid": "shellyem3_power",
+  "version": 10
 }

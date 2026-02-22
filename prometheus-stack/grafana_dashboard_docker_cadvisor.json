@@ -427,7 +427,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Docker Containers Overview (cAdvisor)",
-  "uid": "docker-cadvisor-overview",
+  "title": "Docker cAdvisor Overview",
+  "uid": "docker_cadvisor_overview",
   "version": 12
 }

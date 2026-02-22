@@ -73,6 +73,14 @@ groups:
       summary: "Timeout for AEMET station"
       description: "No data received for AEMET station {{ $labels.station_id }} in the last 2 hours."
 
+  - alert: AnomalyDetected
+    expr: anomaly_count > 0
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Anomalies detected in boreas_mediacion_detected_anomaly"
+      description: "There are {{ $value }} anomalies detected in the last hour."
 
 # Docker/cAdvisor Alerts
   - alert: DockerContainerStopped

@@ -83,10 +83,26 @@ services:
       - ./grafana_dashboard_iaq_measures.json:/etc/grafana/provisioning/dashboards/grafana_dashboard_iaq_measures.json
       - ./grafana_dashboard_gadgets.json:/etc/grafana/provisioning/dashboards/grafana_dashboard_gadgets.json
       - ./grafana_dashboard_docker_cadvisor.json:/etc/grafana/provisioning/dashboards/grafana_dashboard_docker_cadvisor.json
+      - ./grafana_dashboard_shellyem3_power.json:/etc/grafana/provisioning/dashboards/grafana_dashboard_shellyem3_power.json
+      - ./dashboards_provisioning/grafana_dashboard_streetlights.json:/etc/grafana/provisioning/dashboards/streetlights.json
     networks:
       - boreas_rgiot_default
       - boreas_net
 
+
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres_exporter
+    env_file:
+      - ./postgres_exporter.env
+    volumes:
+      - ./custom_queries.yml:/etc/postgres_exporter/custom_queries.yml
+    ports:
+      - "9187:9187"
+    networks:
+      - boreas_net
+    command:
+      - '--extend.query-path=/etc/postgres_exporter/custom_queries.yml'
 
 volumes:
   grafana-data:

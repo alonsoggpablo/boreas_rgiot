@@ -1,0 +1,35 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Streetlight Current & Anomalies",
+    "panels": [
+      {
+        "type": "graph",
+        "title": "Streetlight Current (Mean)",
+        "targets": [
+          {
+            "expr": "avg_over_time(streetlight_anomalies_total[1h])",
+            "legendFormat": "Mean Current"
+          }
+        ],
+        "datasource": "Prometheus",
+        "id": 1
+      },
+      {
+        "type": "graph",
+        "title": "Streetlight Anomalies",
+        "targets": [
+          {
+            "expr": "streetlight_anomalies_total",
+            "legendFormat": "Anomalies"
+          }
+        ],
+        "datasource": "Prometheus",
+        "id": 2
+      }
+    ],
+    "schemaVersion": 16,
+    "version": 1
+  },
+  "overwrite": true
+}

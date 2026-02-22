@@ -1,0 +1,6 @@
+anomaly_count:
+  query: "SELECT count(*) FROM public.boreas_mediacion_detected_anomaly WHERE detected_at > NOW() - INTERVAL '1 hour';"
+  metrics:
+    - name: anomaly_count
+      type: gauge
+      help: "Number of anomalies detected in the last hour"
